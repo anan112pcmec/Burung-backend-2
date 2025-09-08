@@ -1,9 +1,15 @@
 package notify_payload
 
+import "github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
+
+type TableAndAction struct {
+	Table  string `json:"table"`
+	Action string `json:"action"`
+}
+
 // --- Pengguna ---
 type PenggunaNotifyPayload struct {
-	Table    string `json:"table_pengguna"`
-	Action   string `json:"action_pengguna"`
+	TableAndAction
 	Id       int64  `json:"id_pengguna"`
 	Username string `json:"username_pengguna"`
 	Nama     string `json:"nama_pengguna"`
@@ -23,8 +29,7 @@ func (p *PenggunaNotifyPayload) Validate() (Message string, Action string) {
 }
 
 type SellerNotifyPayload struct {
-	Table            string `json:"table_seller"`
-	Action           string `json:"action_seller"`
+	TableAndAction
 	Id               int32  `json:"id_seller"`
 	Nama             string `json:"nama_seller"`
 	Email            string `json:"email_seller"`
@@ -46,11 +51,10 @@ func (s *SellerNotifyPayload) Validate() (Message string, Action string) {
 }
 
 type KurirNotifyPayload struct {
-	Table  string `json:"table"`
-	Action string `json:"action"`
-	Id     int64  `json:"id"`
-	Nama   string `json:"nama"`
-	Email  string `json:"email"`
+	TableAndAction
+	Id    int64  `json:"id"`
+	Nama  string `json:"nama"`
+	Email string `json:"email"`
 }
 
 func (k *KurirNotifyPayload) Validate() (Message string, Action string) {
@@ -71,5 +75,11 @@ type ChangedColumns struct {
 
 type NotifyResponsesPayloadPengguna struct {
 	PenggunaNotifyPayload
+	ChangedColumns ChangedColumns `json:"changed_columns"`
+}
+
+type NotifyResponsesPayloadBarang struct {
+	TableAndAction
+	models.BarangInduk
 	ChangedColumns ChangedColumns `json:"changed_columns"`
 }

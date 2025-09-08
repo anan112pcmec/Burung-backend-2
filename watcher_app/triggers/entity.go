@@ -55,8 +55,8 @@ BEGIN
     END IF;
 
     payload := json_build_object(
-        'table_pengguna', TG_TABLE_NAME,
-        'action_pengguna', TG_OP,
+        'table', TG_TABLE_NAME,
+        'action', TG_OP,
         'id_pengguna', NEW.id,
         'username_pengguna', NEW.username,
         'nama_pengguna', NEW.nama,
@@ -84,8 +84,8 @@ $$ LANGUAGE plpgsql;
 		payload JSON;
 	BEGIN
 		payload := json_build_object(
-			'table_seller', TG_TABLE_NAME,
-			'action_seller', TG_OP,
+			'table', TG_TABLE_NAME,
+			'action', TG_OP,
 			'id_seller', NEW.id,
 			'nama_seller', NEW.nama,
 			'email_seller', NEW.email,

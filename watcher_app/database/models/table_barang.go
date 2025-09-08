@@ -7,19 +7,20 @@ type BarangContract interface {
 }
 
 type BarangInduk struct {
-	ID            int32      `gorm:"primaryKey;autoIncrement" json:"id_barang_induk"`
-	SellerID      int32      `gorm:"column:id_seller;not null" json:"id_seller_barang_induk"`
-	Seller        Seller     `gorm:"foreignKey:SellerID;references:ID"`
-	NamaBarang    string     `gorm:"column:nama_barang;type:varchar(200);not null" json:"nama_barang_induk"`
-	JenisBarang   SellerType `gorm:"column:jenis_barang;type:varchar(250);not null" json:"jenis_barang_induk"`
-	Deskripsi     string     `gorm:"column:deskripsi;type:text" json:"deskripsi_barang_induk"`
-	TanggalRilis  string     `gorm:"column:tanggal_rilis;type:date;not null" json:"tanggal_rilis_barang_induk"`
-	Viewed        int32      `gorm:"column:viewed;type:int4;not null;default:0" json:"viewed_barang_induk"`
-	Likes         int32      `gorm:"column:likes;type:int4;not null;default:0" json:"likes_barang_induk"`
-	TotalKomentar int32      `gorm:"column:total_komentar;type:int4;not null;default:0" json:"total_komentar_barang_induk"`
-	CreatedAt     time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt     time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt     *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+	ID               int32      `gorm:"primaryKey;autoIncrement" json:"id_barang_induk"`
+	SellerID         int32      `gorm:"column:id_seller;not null" json:"id_seller_barang_induk"`
+	Seller           Seller     `gorm:"foreignKey:SellerID;references:ID"`
+	NamaBarang       string     `gorm:"column:nama_barang;type:varchar(200);not null" json:"nama_barang_induk"`
+	JenisBarang      string     `gorm:"column:jenis_barang;type:varchar(250);not null" json:"jenis_barang_induk"`
+	OriginalKategori string     `gorm:"column:original_kategori;type:varchar(250)" json:"original_kategori"`
+	Deskripsi        string     `gorm:"column:deskripsi;type:text" json:"deskripsi_barang_induk"`
+	TanggalRilis     string     `gorm:"column:tanggal_rilis;type:date;not null" json:"tanggal_rilis_barang_induk"`
+	Viewed           int32      `gorm:"column:viewed;type:int4;not null;default:0" json:"viewed_barang_induk"`
+	Likes            int32      `gorm:"column:likes;type:int4;not null;default:0" json:"likes_barang_induk"`
+	TotalKomentar    int32      `gorm:"column:total_komentar;type:int4;not null;default:0" json:"total_komentar_barang_induk"`
+	CreatedAt        time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt        time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt        *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (b *BarangInduk) Validating() string {

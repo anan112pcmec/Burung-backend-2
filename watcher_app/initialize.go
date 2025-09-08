@@ -56,16 +56,22 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	fmt.Println("Database aktif:", currentDB)
 
 	if err := trigger.SetupEntityTriggers(data.DB); err != nil {
-		fmt.Println("❌ Gagal Membuat Trigger Entity", err)
+		fmt.Println(" Gagal Membuat Trigger Entity", err)
 	} else {
-		fmt.Println("✅ Berhasil Membuat Trigger Entity")
+		fmt.Println(" Berhasil Membuat Trigger Entity")
+	}
+
+	if err := trigger.SetupBarangTriggers(data.DB); err != nil {
+		fmt.Println(" Gagal Membuat Trigger Barang", err)
+	} else {
+		fmt.Println(" Berhasil Membuat Trigger Barang")
 	}
 
 	// Jalankan watcher dengan context
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		Entity_Watcher(ctx, dsn, data.DB, redisEntityCache)
+		Pengguna_Watcher(ctx, dsn, data.DB, redisEntityCache)
 	}()
 	go func() {
 		defer wg.Done()

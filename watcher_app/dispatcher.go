@@ -16,7 +16,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/services"
 )
 
-func Entity_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity_cache *redis.Client) {
+func Pengguna_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity_cache *redis.Client) {
 	fmt.Println("🟢 Mulai mengawasi pengguna_channel")
 
 	minReconn := 10 * time.Second
@@ -68,7 +68,57 @@ func Entity_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity_c
 	}
 }
 
-func Barang_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, barang_cache *redis.Client) {
-
+func Barang_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB, barangCache *redis.Client) {
 	fmt.Println("Mengawasi Perubahan Seluruh Data Barang Induk, Kategori, dan Varian Barang")
+
+	minReconn := 10 * time.Second
+	maxReconn := time.Minute
+
+	// Listener ke Postgres
+	listener := pq.NewListener(dsn, minReconn, maxReconn, func(ev pq.ListenerEventType, err error) {
+		if err != nil {
+			log.Printf("[Listener Error] %v", err)
+		}
+	})
+
+	if err := listener.Listen("barang_induk_channel"); err != nil {
+		log.Fatalf("Gagal listen barang_induk_channel: %v", err)
+	}
+
+	ticker := time.NewTicker(90 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case n := <-listener.Notify:
+			if n == nil {
+				continue
+			}
+
+			fmt.Printf("🔔 Dapat notify Barang: %s\n", n.Extra)
+
+			var data notify_payload.NotifyResponsesPayloadBarang
+			if err := json.Unmarshal([]byte(n.Extra), &data); err != nil {
+				fmt.Println("Gagal Parse JSON:", err)
+				continue
+			}
+
+			if data.Action == "INSERT" {
+				go services.BarangMasuk(ctx, dbQuery, data, barangCache)
+			}
+
+			if data.Action == "DELETE" {
+				go services.HapusBarang(ctx, dbQuery, data, barangCache)
+			}
+
+		case <-ticker.C:
+			if err := listener.Ping(); err != nil {
+				log.Printf("[Ping Listener] error: %v", err)
+			}
+
+		case <-ctx.Done():
+			fmt.Println("🔴 Barang_Watcher dihentikan")
+			return
+		}
+	}
 }
