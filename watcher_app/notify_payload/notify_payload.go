@@ -7,27 +7,6 @@ type TableAndAction struct {
 	Action string `json:"action"`
 }
 
-// --- Pengguna ---
-type PenggunaNotifyPayload struct {
-	TableAndAction
-	Id       int64  `json:"id_pengguna"`
-	Username string `json:"username_pengguna"`
-	Nama     string `json:"nama_pengguna"`
-	Email    string `json:"email_pengguna"`
-}
-
-func (p *PenggunaNotifyPayload) Validate() (Message string, Action string) {
-	if p.Table != "pengguna" {
-		return "Bukan Dari Table Pengguna", p.Action
-	}
-
-	if p.Id == 0 || p.Email == "" || p.Username == "" || p.Nama == "" {
-		return "Payload Ada Yang Kosong ID/NAMA/USERNAME/EMAIL", p.Action
-	}
-
-	return "Memenuhi_Syarat", p.Action
-}
-
 type SellerNotifyPayload struct {
 	TableAndAction
 	Id               int32  `json:"id_seller"`
@@ -74,8 +53,15 @@ type ChangedColumns struct {
 }
 
 type NotifyResponsesPayloadPengguna struct {
-	PenggunaNotifyPayload
-	ChangedColumns ChangedColumns `json:"changed_columns"`
+	TableAndAction
+	models.Pengguna
+	ChangedColumns ChangedColumns `json:"changed_columns_pengguna"`
+}
+
+type NotifyResponsePayloadSeller struct {
+	TableAndAction
+	models.Seller
+	ChangedColumns ChangedColumns `json:"changed_columns_seller"`
 }
 
 type NotifyResponsesPayloadBarang struct {

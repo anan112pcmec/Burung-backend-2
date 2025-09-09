@@ -68,10 +68,14 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	}
 
 	// Jalankan watcher dengan context
-	wg.Add(2)
+	wg.Add(3)
 	go func() {
 		defer wg.Done()
 		Pengguna_Watcher(ctx, dsn, data.DB, redisEntityCache)
+	}()
+	go func() {
+		defer wg.Done()
+		Seller_Watcher(ctx, dsn, data.DB, redisEntityCache)
 	}()
 	go func() {
 		defer wg.Done()

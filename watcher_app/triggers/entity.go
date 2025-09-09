@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
+
 )
 
 func SetupEntityTriggers(db *gorm.DB) error {
@@ -26,13 +27,14 @@ func SetupEntityTriggers(db *gorm.DB) error {
 
 	triggers := [...]string{
 		// Pengguna (sudah lengkap)
-		`CREATE OR REPLACE FUNCTION notify_pengguna_change()
-RETURNS trigger AS $$
-DECLARE
-    payload JSON;
-    changed_columns JSON := '{}';
-BEGIN
-    -- Loop setiap kolom dan cek perubahan
+		`-- Fungsi untuk pengguna
+		CREATE OR REPLACE FUNCTION notify_pengguna_change()
+		RETURNS trigger AS $$
+		DECLARE
+			payload JSON;
+			changed_columns JSON := '{}';
+		BEGIN
+    -- Cek update untuk kolom tertentu
     IF TG_OP = 'UPDATE' THEN
         IF OLD.username IS DISTINCT FROM NEW.username THEN
             changed_columns := jsonb_set(changed_columns::jsonb, '{username}', to_jsonb(NEW.username));
@@ -46,10 +48,10 @@ BEGIN
         IF OLD.password_hash IS DISTINCT FROM NEW.password_hash THEN
             changed_columns := jsonb_set(changed_columns::jsonb, '{password_hash}', to_jsonb(NEW.password_hash));
         END IF;
-		IF OLD.pin_hash IS DISTINCT FROM NEW.pin_hash THEN
+        IF OLD.pin_hash IS DISTINCT FROM NEW.pin_hash THEN
             changed_columns := jsonb_set(changed_columns::jsonb, '{pin_hash}', to_jsonb(NEW.pin_hash));
         END IF;
-		IF OLD.status IS DISTINCT FROM NEW.status THEN
+        IF OLD.status IS DISTINCT FROM NEW.status THEN
             changed_columns := jsonb_set(changed_columns::jsonb, '{status}', to_jsonb(NEW.status));
         END IF;
     END IF;
@@ -57,53 +59,62 @@ BEGIN
     payload := json_build_object(
         'table', TG_TABLE_NAME,
         'action', TG_OP,
-        'id_pengguna', NEW.id,
-        'username_pengguna', NEW.username,
-        'nama_pengguna', NEW.nama,
-        'email_pengguna', NEW.email,
-        'changed_columns', changed_columns
+        'id_user', NEW.id,
+        'username_user', NEW.username,
+        'nama_user', NEW.nama,
+        'email_user', NEW.email,
+        'changed_columns_pengguna', changed_columns
     );
 
     PERFORM pg_notify('pengguna_channel', payload::text);
     RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+		END;
+		$$ LANGUAGE plpgsql;
 
+		CREATE TRIGGER pengguna_trigger
+		AFTER INSERT OR UPDATE OR DELETE
+		ON pengguna
+		FOR EACH ROW
+		EXECUTE FUNCTION notify_pengguna_change();
 
+		-- Fungsi untuk seller dengan changed_columns_seller
+		CREATE OR REPLACE FUNCTION notify_seller_change()
+		RETURNS trigger AS $$
+		DECLARE
+			payload JSON;
+			changed_columns JSON := '{}';
+		BEGIN
+			-- Cek update untuk kolom tertentu, misalnya status
+			IF TG_OP = 'UPDATE' THEN
+				IF OLD.status IS DISTINCT FROM NEW.status THEN
+					changed_columns := jsonb_set(changed_columns::jsonb, '{status}', to_jsonb(NEW.status));
+				END IF;
+				-- Bisa ditambahkan kolom lain jika ingin track perubahan
+			END IF;
 
-	CREATE TRIGGER pengguna_trigger
-	AFTER INSERT OR UPDATE OR DELETE
-	ON pengguna
-	FOR EACH ROW
-	EXECUTE FUNCTION notify_pengguna_change();`,
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id_seller', NEW.id,
+				'username_seller', NEW.username,
+				'nama_seller', NEW.nama,
+				'email_seller', NEW.email,
+				'jenis_seller', NEW.jenis,
+				'seller_dedication', NEW.seller_dedication,
+				'follower_total_seller', NEW.follower_total,
+				'changed_columns_seller', changed_columns
+			);
 
-		// Seller (tambahkan field penting untuk cache)
-		`CREATE OR REPLACE FUNCTION notify_seller_change()
-	RETURNS trigger AS $$
-	DECLARE
-		payload JSON;
-	BEGIN
-		payload := json_build_object(
-			'table', TG_TABLE_NAME,
-			'action', TG_OP,
-			'id_seller', NEW.id,
-			'nama_seller', NEW.nama,
-			'email_seller', NEW.email,
-			'username_seller', NEW.username,
-			'jenis_seller', NEW.jenis,
-			'seller_dedication', NEW.seller_dedication,
-			'follower_total_seller', NEW.follower_total
-		);
-		PERFORM pg_notify('seller_channel', payload::text);
-		RETURN NEW;
-	END;
-	$$ LANGUAGE plpgsql;
+			PERFORM pg_notify('seller_channel', payload::text);
+			RETURN NEW;
+		END;
+		$$ LANGUAGE plpgsql;
 
-	CREATE TRIGGER seller_trigger
-	AFTER INSERT OR UPDATE OR DELETE
-	ON seller
-	FOR EACH ROW
-	EXECUTE FUNCTION notify_seller_change();`,
+		CREATE TRIGGER seller_trigger
+		AFTER INSERT OR UPDATE OR DELETE
+		ON seller
+		FOR EACH ROW
+		EXECUTE FUNCTION notify_seller_change();`,
 
 		// Kurir (tidak ada username)
 		`CREATE OR REPLACE FUNCTION notify_kurir_change()
