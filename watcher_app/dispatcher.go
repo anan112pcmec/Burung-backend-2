@@ -14,7 +14,6 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/notify_payload"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/services"
-
 )
 
 func Pengguna_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity_cache *redis.Client) {

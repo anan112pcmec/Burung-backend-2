@@ -16,7 +16,7 @@ type Pengguna struct {
 	Email          string     `gorm:"column:email;type:varchar(100);not null;uniqueIndex" json:"email_user"`
 	PasswordHash   string     `gorm:"column:password_hash;type:varchar(250);not null;default:''" json:"pass_user"`
 	PinHash        string     `gorm:"column:pin_hash;type:varchar(250);not null;default:''" json:"pin_user"`
-	StatusPengguna Status     `gorm:"column:status;type:varchar(250);not null;default:'Offline'" json:"status_user"`
+	StatusPengguna Status     `gorm:"column:status;type:status;not null;default:'Offline'" json:"status_user"`
 	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
@@ -59,22 +59,22 @@ const (
 )
 
 type Seller struct {
-	ID               int32       `gorm:"primaryKey;autoIncrement" json:"id_seller"`
-	Username         string      `gorm:"column:username;type:varchar(100);notnull;default:''" json:"username_seller"`
-	Nama             string      `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama_seller"`
-	Email            string      `gorm:"column:email;type:varchar(150);not null;default:''" json:"email_seller"`
-	Jenis            JenisSeller `gorm:"column:jenis;type:varchar(250);not null;default:'Personal'" json:"jenis_seller"`
-	Norek            string      `gorm:"column:norek;type:varchar(250);not null;default:''" json:"norek_seller"`
-	SellerDedication SellerType  `gorm:"column:seller_dedication;type:varchar(250);not null;default:'Semua Barang'" json:"seller_dedication"`
-	JamOperasional   string      `gorm:"column:jam_operasional;type:text;not null;default:''" json:"jam_operasional_seller"`
-	Punchline        string      `gorm:"column:punchline;type:text;not null;default:''" json:"punchline_seller"`
-	Password         string      `gorm:"column:password_hash;type:varchar(250);not null;default:''" json:"pass_seller"`
-	Deskripsi        string      `gorm:"column:deskripsi;type:text;not null;default:''" json:"deskripsi_seller"`
-	FollowerTotal    int32       `gorm:"column:follower_total;type:int4;not null;default:0" json:"follower_total_seller"`
-	StatusSeller     Status      `gorm:"column:status;type:varchar(250);not null;default:'Offline'" json:"status_seller"`
-	CreatedAt        time.Time   `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt        time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt        *time.Time  `gorm:"index" json:"deleted_at,omitempty"`
+	ID               int32      `gorm:"primaryKey;autoIncrement" json:"id_seller"`
+	Username         string     `gorm:"column:username;type:varchar(100);notnull;default:''" json:"username_seller"`
+	Nama             string     `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama_seller"`
+	Email            string     `gorm:"column:email;type:varchar(150);not null;default:''" json:"email_seller"`
+	Jenis            string     `gorm:"column:jenis;type:jenis_seller;not null;default:'Personal'" json:"jenis_seller"`
+	Norek            string     `gorm:"column:norek;type:varchar(250);not null;default:''" json:"norek_seller"`
+	SellerDedication string     `gorm:"column:seller_dedication;type:seller_dedication;not null;default:'Semua Barang'" json:"seller_dedication"`
+	JamOperasional   string     `gorm:"column:jam_operasional;type:text;not null;default:''" json:"jam_operasional_seller"`
+	Punchline        string     `gorm:"column:punchline;type:text;not null;default:''" json:"punchline_seller"`
+	Password         string     `gorm:"column:password_hash;type:varchar(250);not null;default:''" json:"pass_seller"`
+	Deskripsi        string     `gorm:"column:deskripsi;type:text;not null;default:''" json:"deskripsi_seller"`
+	FollowerTotal    int32      `gorm:"column:follower_total;type:int4;not null;default:0" json:"follower_total_seller"`
+	StatusSeller     string     `gorm:"column:status;type:status;not null;default:'Offline'" json:"status_seller"`
+	CreatedAt        time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt        time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt        *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (Seller) TableName() string {
@@ -93,17 +93,17 @@ const (
 )
 
 type Kurir struct {
-	ID               int64             `gorm:"primaryKey;autoIncrement" json:"id_kurir"`
-	Nama             string            `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama_kurir"`
-	Email            string            `gom:"column:email;type:varchar(150);not null;default:''" json:"email_kurir"`
-	Jenis            JenisLayananKurir `gorrm:"column:jenis;type:varchar(250);not null;default:'Reguler'" json:"jenis_kurir"`
-	PasswordHash     string            `gorm:"column:password_hash;type:varchar(250);not null;default:''" json:"pass_kurir"`
-	Deskripsi        string            `gorm:"column:deskripsi;type:text;not null;default:''" json:"deskripsi_kurir"`
-	StatusKurir      Status            `gorm:"column:status;type:varchar(150);not null;default:'Offline'" json:"status_kurir"`
-	JumlahPengiriman int32             `gorm:"column:jumlah_pengiriman;type:int4;not null;default:0"`
-	CreatedAt        time.Time         `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt        time.Time         `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt        *time.Time        `gorm:"index" json:"deleted_at,omitempty"`
+	ID               int64      `gorm:"primaryKey;autoIncrement" json:"id_kurir"`
+	Nama             string     `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama_kurir"`
+	Email            string     `gorm:"column:email;type:varchar(150);not null;default:''" json:"email_kurir"`
+	Jenis            string     `gorm:"column:jenis;type:jenis_layanan_kurir;not null;default:'Reguler'" json:"jenis_kurir"`
+	PasswordHash     string     `gorm:"column:password_hash;type:varchar(250);not null;default:''" json:"pass_kurir"`
+	Deskripsi        string     `gorm:"column:deskripsi;type:text;not null;default:''" json:"deskripsi_kurir"`
+	StatusKurir      string     `gorm:"column:status;type:status;not null;default:'Offline'" json:"status_kurir"`
+	JumlahPengiriman int32      `gorm:"column:jumlah_pengiriman;type:int4;not null;default:0"`
+	CreatedAt        time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt        time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt        *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (Kurir) TableName() string {

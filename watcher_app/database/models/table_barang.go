@@ -11,7 +11,7 @@ type BarangInduk struct {
 	SellerID         int32      `gorm:"column:id_seller;not null" json:"id_seller_barang_induk"`
 	Seller           Seller     `gorm:"foreignKey:SellerID;references:ID"`
 	NamaBarang       string     `gorm:"column:nama_barang;type:varchar(200);not null" json:"nama_barang_induk"`
-	JenisBarang      string     `gorm:"column:jenis_barang;type:varchar(250);not null" json:"jenis_barang_induk"`
+	JenisBarang      string     `gorm:"column:jenis_barang;type:seller_dedication;not null" json:"jenis_barang_induk"`
 	OriginalKategori string     `gorm:"column:original_kategori;type:varchar(250)" json:"original_kategori"`
 	Deskripsi        string     `gorm:"column:deskripsi;type:text" json:"deskripsi_barang_induk"`
 	TanggalRilis     string     `gorm:"column:tanggal_rilis;type:date;not null" json:"tanggal_rilis_barang_induk"`
@@ -79,17 +79,17 @@ const (
 )
 
 type VarianBarang struct {
-	ID            int64              `gorm:"primaryKey;autoIncrement" json:"id_varian_barang"`
-	IdBarangInduk int32              `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_varian_barang"`
-	BarangInduk   BarangInduk        `gorm:"foreignKey:IdBarangInduk;references:ID"`
-	IdKategori    int64              `gorm:"column:id_kategori;not null" json:"id_kategori_varian_barang"`
-	Kategori      KategoriBarang     `gorm:"foreignKey:IdKategori;references:ID"`
-	IdTransaksi   int64              `gorm:"column:id_transaksi;type:int8" json:"id_transksi_varian_barang"`
-	Sku           string             `gorm:"column:sku;type:varchar(100);not null" json:"Sku_varian_barang"`
-	Status        StatusVarianBarang `gorm:"column:status;type:varchar(250);not null; default:'Ready'" json:"status_varian_barang"`
-	CreatedAt     time.Time          `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt     time.Time          `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt     *time.Time         `gorm:"index" json:"deleted_at,omitempty"`
+	ID            int64          `gorm:"primaryKey;autoIncrement" json:"id_varian_barang"`
+	IdBarangInduk int32          `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_varian_barang"`
+	BarangInduk   BarangInduk    `gorm:"foreignKey:IdBarangInduk;references:ID"`
+	IdKategori    int64          `gorm:"column:id_kategori;not null" json:"id_kategori_varian_barang"`
+	Kategori      KategoriBarang `gorm:"foreignKey:IdKategori;references:ID"`
+	IdTransaksi   int64          `gorm:"column:id_transaksi;type:int8" json:"id_transksi_varian_barang"`
+	Sku           string         `gorm:"column:sku;type:varchar(100);not null" json:"Sku_varian_barang"`
+	Status        string         `gorm:"column:status;type:status_varian;not null; default:'Ready'" json:"status_varian_barang"`
+	CreatedAt     time.Time      `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt     time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt     *time.Time     `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (VarianBarang) TableName() string {

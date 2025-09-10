@@ -98,14 +98,14 @@ const (
 )
 
 type AktivitasPengguna struct {
-	ID             int64        `gorm:"primaryKey;autoIncrement" json:"id_aktivitas_pengguna"`
-	IdPengguna     int64        `gorm:"column:id_pengguna;not null" json:"id_pengguna_aktivitas_pengguna"`
-	Pengguna       Pengguna     `gorm:"foreignKey:IdPengguna;references:ID"`
-	WaktuDilakukan time.Time    `gorm:"column:waktu_dilakukan;autoCreateTime" json:"waktu_dilakukan_aktivitas_pengguna"`
-	Aksi           AksiPengguna `gorm:"column:aksi;type:varchar(30);not null" json:"aksi_aktivitas_pengguna"`
-	CreatedAt      time.Time    `gorm:"autoCreateTime"`
-	UpdatedAt      time.Time    `gorm:"autoUpdateTime"`
-	DeletedAt      *time.Time   `gorm:"index"`
+	ID             int64      `gorm:"primaryKey;autoIncrement" json:"id_aktivitas_pengguna"`
+	IdPengguna     int64      `gorm:"column:id_pengguna;not null" json:"id_pengguna_aktivitas_pengguna"`
+	Pengguna       Pengguna   `gorm:"foreignKey:IdPengguna;references:ID"`
+	WaktuDilakukan time.Time  `gorm:"column:waktu_dilakukan;autoCreateTime" json:"waktu_dilakukan_aktivitas_pengguna"`
+	Aksi           string     `gorm:"column:aksi;type:aksi_pengguna;not null" json:"aksi_aktivitas_pengguna"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt      time.Time  `gorm:"autoUpdateTime"`
+	DeletedAt      *time.Time `gorm:"index"`
 }
 
 func (AktivitasPengguna) TableName() string {

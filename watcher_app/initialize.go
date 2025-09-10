@@ -13,7 +13,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
+	"github.com/anan112pcmec/Burung-backend-2/watcher_app/maintain"
 	trigger "github.com/anan112pcmec/Burung-backend-2/watcher_app/triggers"
+
 )
 
 type Databases struct {
@@ -68,7 +70,10 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	}
 
 	// Jalankan watcher dengan context
-	wg.Add(3)
+	wg.Add(4)
+	go func() {
+		maintain.BarangMaintainLoop(ctx, data.DB, redisBarangCache)
+	}()
 	go func() {
 		defer wg.Done()
 		Pengguna_Watcher(ctx, dsn, data.DB, redisEntityCache)
