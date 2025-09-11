@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/joho/godotenv"
+	"github.com/meilisearch/meilisearch-go"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/maintain"
 	trigger "github.com/anan112pcmec/Burung-backend-2/watcher_app/triggers"
-
 )
 
 type Databases struct {
@@ -53,6 +53,19 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 		DB:       2,
 	})
 
+	keysnya := "SuperSecureKey1234567890"
+
+	SearchEngine := meilisearch.New("http://localhost:7700", meilisearch.WithAPIKey(keysnya))
+
+	barangIndukIndex := SearchEngine.Index("barang_induk_all")
+
+	attrs := []interface{}{"jenis_barang_induk", "nama_barang_induk", "id_seller_barang_induk", "tanggal_rilis_barang_induk"}
+	task2, err2 := barangIndukIndex.UpdateFilterableAttributes(&attrs)
+	if err2 != nil {
+		log.Fatal("❌ Gagal update filterable attributes:", err2)
+	}
+	log.Println("✅ Task UID:", task2.TaskUID)
+
 	var currentDB string
 	data.DB.Raw("SELECT current_database();").Scan(&currentDB)
 	fmt.Println("Database aktif:", currentDB)
@@ -72,7 +85,8 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	// Jalankan watcher dengan context
 	wg.Add(4)
 	go func() {
-		maintain.BarangMaintainLoop(ctx, data.DB, redisBarangCache)
+		fmt.Println("Jalan NIh")
+		maintain.BarangMaintainLoop(ctx, data.DB, redisBarangCache, SearchEngine)
 	}()
 	go func() {
 		defer wg.Done()
@@ -84,7 +98,7 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	}()
 	go func() {
 		defer wg.Done()
-		Barang_Watcher(ctx, dsn, data.DB, redisBarangCache)
+		Barang_Watcher(ctx, dsn, data.DB, redisBarangCache, SearchEngine)
 	}()
 }
 

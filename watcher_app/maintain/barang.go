@@ -3,40 +3,144 @@ package maintain
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/meilisearch/meilisearch-go"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/helper"
+
 )
 
 // convertJenisBarang akan mengubah nama jenis internal jadi format DB
 
-func BarangMaintainLoop(ctx context.Context, db *gorm.DB, rds *redis.Client) {
+func BarangMaintainLoop(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) {
 	for {
 		select {
 		case <-ctx.Done():
 			fmt.Println("❌ BarangMaintainLoop dihentikan")
 			return
 		default:
-			BarangMaintain(ctx, db, rds)
+			BarangMaintain(ctx, db, rds, SE)
 			time.Sleep(10 * time.Minute)
 		}
 	}
 }
 
-func BarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client) {
-	var idSeller []int32
+func BarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) {
 
+	// Ambil semua ID barang
+
+	// index := SE.Index("barang_induk")
+	// if _, err := index.AddDocuments(data_barang_induk, nil); err != nil {
+	// 	fmt.Println("❌ Gagal menambahkan dokumen ke Meilisearch:", err)
+	// 	return
+	// }
+
+	// searchRes, err := index.Search("22", &meilisearch.SearchRequest{
+	// 	Limit: 5,
+	// })
+	// if err != nil {
+	// 	fmt.Println("❌ Gagal melakukan search:", err)
+	// 	return
+	// }
+
+	// fmt.Println("✅ Hasil Search:", searchRes.Hits)
+
+	idbar := []int32{}
+	if err := db.Model(&models.BarangInduk{}).Pluck("id", &idbar).Error; err != nil {
+		log.Println("❌ Gagal Mendapatkan Id Barang:", err)
+		return
+	}
+
+	if len(idbar) == 0 {
+		log.Println("❌ Tidak ada Id Barang ditemukan")
+		return
+	}
+
+	dataBarangInduk := []models.BarangInduk{}
+	if err := db.Where("id IN ?", idbar).Find(&dataBarangInduk).Error; err != nil {
+		log.Println("❌ Gagal mengambil data barang:", err)
+		return
+	}
+
+	barangIndukIndex := SE.Index("barang_induk_all")
+	var documents []map[string]interface{}
+
+	for _, b := range dataBarangInduk {
+		fmt.Println("baraang", b.NamaBarang)
+		doc := map[string]interface{}{
+			"id":                         b.ID,
+			"id_barang_induk":            b.ID,
+			"nama_barang_induk":          b.NamaBarang,
+			"id_seller_barang_induk":     b.SellerID,
+			"jenis_barang_induk":         b.JenisBarang,
+			"tanggal_rilis_barang_induk": b.TanggalRilis,
+			"viewed_barang_induk":        b.Viewed,
+			"likes_barang_induk":         b.Likes,
+		}
+		documents = append(documents, doc)
+	}
+
+	task, err := barangIndukIndex.AddDocuments(documents, nil)
+	if err != nil {
+		log.Fatal("❌ Gagal menambahkan dokumen ke Meilisearch:", err)
+	}
+
+	log.Println("✅ Task UID:", task.TaskUID)
+
+	// Hits adalah []interface{}, jadi kita konversi ke []map[string]interface{}
+	searchRes, err := barangIndukIndex.Search("Merah", &meilisearch.SearchRequest{})
+	if err != nil {
+		log.Fatal("❌ Gagal melakukan pencarian:", err)
+	}
+
+	hasil := helper.BarangDataFromSearchEngine(searchRes.Hits)
+
+	// Tampilkan hasil dengan readable
+	for _, b := range hasil {
+		fmt.Println("Dari Hasil")
+		fmt.Printf("✅ Hasil: ID=%v, Nama=%v, SellerID=%v, Jenis=%v, Viewed=%v, Likes=%v\n",
+			b.ID,
+			b.NamaBarang,
+			b.SellerID,
+			b.JenisBarang,
+			b.Viewed,
+			b.Likes,
+		)
+	}
+
+	fmt.Println("Barang Maintain Jalan")
+	if err_buat_key := rds.SAdd(ctx, "barang_keys", "_init_").Err(); err_buat_key != nil {
+		fmt.Println("Gagal Membuat keys semua barang")
+	} else {
+		var barang_induk []int32
+		if err := db.Model(&models.BarangInduk{}).Pluck("id", &barang_induk).Error; err != nil {
+			fmt.Println("Gagal Ambil id Semua Barang")
+		} else {
+			for _, data_id := range barang_induk {
+
+				redisKey := fmt.Sprintf("barang:%v", data_id)
+
+				if err := rds.SAdd(ctx, "barang_keys", redisKey).Err(); err != nil {
+					fmt.Printf("❌ Gagal masukin %s ke barang_keys: %v\n", redisKey, err)
+				} else {
+					fmt.Printf("✅ Berhasil masukin %s ke barang_keys\n", redisKey)
+				}
+			}
+		}
+	}
+
+	var idSeller []int32
 	// Ambil semua ID seller
 	if err := db.Model(models.Seller{}).Pluck("id", &idSeller).Error; err != nil {
 		fmt.Println("❌ Gagal mendapatkan ID seluruh seller:", err)
 		return
 	}
 
-	// Maintain key barang_seller
 	// Maintain key barang_seller
 	for _, id := range idSeller {
 		key := fmt.Sprintf("barang_seller:%v", id)

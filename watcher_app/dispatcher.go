@@ -9,6 +9,7 @@ import (
 
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
+	"github.com/meilisearch/meilisearch-go"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
@@ -120,7 +121,7 @@ func Seller_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity_c
 	}
 }
 
-func Barang_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB, barangCache *redis.Client) {
+func Barang_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB, barangCache *redis.Client, SE meilisearch.ServiceManager) {
 	fmt.Println("Mengawasi Perubahan Seluruh Data Barang Induk, Kategori, dan Varian Barang")
 
 	minReconn := 10 * time.Second
@@ -156,7 +157,7 @@ func Barang_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB, barangCac
 			}
 
 			if data.Action == "INSERT" {
-				go services.BarangMasuk(ctx, dbQuery, data, barangCache)
+				go services.BarangMasuk(ctx, dbQuery, data, barangCache, SE)
 			}
 
 			if data.Action == "DELETE" {

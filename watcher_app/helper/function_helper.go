@@ -1,5 +1,14 @@
 package helper
 
+import (
+	"encoding/json"
+	"log"
+
+	"github.com/meilisearch/meilisearch-go"
+
+	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
+)
+
 func ConvertJenisBarang(jenis string) string {
 	// Map internal -> DB
 	mapJenis := map[string]string{
@@ -56,4 +65,19 @@ func ConvertJenisBarangReverse(jenis string) string {
 	}
 	// fallback kalau tidak ada mapping
 	return jenis
+}
+
+func BarangDataFromSearchEngine(data meilisearch.Hits) []models.BarangInduk {
+	var hasilnyo []models.BarangInduk
+
+	hitsjson, err := json.Marshal(data)
+	if err != nil {
+		log.Fatal("❌ Gagal marshal hits:", err)
+	}
+
+	if err := json.Unmarshal(hitsjson, &hasilnyo); err != nil {
+		log.Fatal("❌ Gagal unmarshal hits ke struct:", err)
+	}
+
+	return hasilnyo
 }

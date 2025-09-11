@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/meilisearch/meilisearch-go"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/notify_payload"
 )
 
-func BarangMasuk(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsesPayloadBarang, rds *redis.Client) {
+func BarangMasuk(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsesPayloadBarang, rds *redis.Client, SE meilisearch.ServiceManager) {
 	fmt.Println("🔔 Mulai proses caching Barang")
 
 	if data.OriginalKategori == "" {
@@ -53,8 +54,6 @@ func BarangMasuk(ctx context.Context, db *gorm.DB, data notify_payload.NotifyRes
 			"deleted_at":                  data.DeletedAt,
 			"harga":                       harga,
 		}
-
-		fmt.Println("📦 Siap push ke Redis key=%s, total field=%d\n", key, len(fields))
 
 		for field, value := range fields {
 			if err := rds.HSet(ctx, key, field, value).Err(); err != nil {
