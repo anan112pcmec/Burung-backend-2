@@ -12,7 +12,6 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/helper"
-
 )
 
 // convertJenisBarang akan mengubah nama jenis internal jadi format DB
@@ -91,27 +90,6 @@ func BarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meil
 	}
 
 	log.Println("✅ Task UID:", task.TaskUID)
-
-	// Hits adalah []interface{}, jadi kita konversi ke []map[string]interface{}
-	searchRes, err := barangIndukIndex.Search("Merah", &meilisearch.SearchRequest{})
-	if err != nil {
-		log.Fatal("❌ Gagal melakukan pencarian:", err)
-	}
-
-	hasil := helper.BarangDataFromSearchEngine(searchRes.Hits)
-
-	// Tampilkan hasil dengan readable
-	for _, b := range hasil {
-		fmt.Println("Dari Hasil")
-		fmt.Printf("✅ Hasil: ID=%v, Nama=%v, SellerID=%v, Jenis=%v, Viewed=%v, Likes=%v\n",
-			b.ID,
-			b.NamaBarang,
-			b.SellerID,
-			b.JenisBarang,
-			b.Viewed,
-			b.Likes,
-		)
-	}
 
 	fmt.Println("Barang Maintain Jalan")
 	if err_buat_key := rds.SAdd(ctx, "barang_keys", "_init_").Err(); err_buat_key != nil {

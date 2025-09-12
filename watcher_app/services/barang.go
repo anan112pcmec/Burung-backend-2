@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/redis/go-redis/v9"
@@ -11,6 +12,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/helper"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/notify_payload"
+
 )
 
 func BarangMasuk(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsesPayloadBarang, rds *redis.Client, SE meilisearch.ServiceManager) {
@@ -62,6 +64,31 @@ func BarangMasuk(ctx context.Context, db *gorm.DB, data notify_payload.NotifyRes
 				fmt.Printf("✅ Redis set OK field=%s value=%v\n", field, value)
 			}
 		}
+	}()
+
+	go func() {
+		barangIndukIndex := SE.Index("barang_induk_all")
+		var documents []map[string]interface{}
+
+		fmt.Println("baraang", data)
+		doc := map[string]interface{}{
+			"id":                         data.BarangInduk.ID,
+			"id_barang_induk":            data.BarangInduk.ID,
+			"nama_barang_induk":          data.NamaBarang,
+			"id_seller_barang_induk":     data.SellerID,
+			"jenis_barang_induk":         data.JenisBarang,
+			"tanggal_rilis_barang_induk": data.TanggalRilis,
+			"viewed_barang_induk":        data.Viewed,
+			"likes_barang_induk":         data.Likes,
+		}
+		documents = append(documents, doc)
+
+		task, err := barangIndukIndex.AddDocuments(documents, nil)
+		if err != nil {
+			log.Fatal("❌ Gagal menambahkan dokumen ke Meilisearch:", err)
+		}
+
+		log.Println("✅ Task UID:", task.TaskUID)
 	}()
 
 	go func() {
