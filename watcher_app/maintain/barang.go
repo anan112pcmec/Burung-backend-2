@@ -31,24 +31,6 @@ func BarangMaintainLoop(ctx context.Context, db *gorm.DB, rds *redis.Client, SE 
 
 func BarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) {
 
-	// Ambil semua ID barang
-
-	// index := SE.Index("barang_induk")
-	// if _, err := index.AddDocuments(data_barang_induk, nil); err != nil {
-	// 	fmt.Println("❌ Gagal menambahkan dokumen ke Meilisearch:", err)
-	// 	return
-	// }
-
-	// searchRes, err := index.Search("22", &meilisearch.SearchRequest{
-	// 	Limit: 5,
-	// })
-	// if err != nil {
-	// 	fmt.Println("❌ Gagal melakukan search:", err)
-	// 	return
-	// }
-
-	// fmt.Println("✅ Hasil Search:", searchRes.Hits)
-
 	idbar := []int32{}
 	if err := db.Model(&models.BarangInduk{}).Pluck("id", &idbar).Error; err != nil {
 		log.Println("❌ Gagal Mendapatkan Id Barang:", err)

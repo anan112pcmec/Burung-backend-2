@@ -52,6 +52,10 @@ type ChangedColumns struct {
 	Status string `json:"status"`
 }
 
+// ////////////////////////////////////////////////////////////////////////////
+// ENTITY PAYLOAD
+// ////////////////////////////////////////////////////////////////////////////
+
 type NotifyResponsesPayloadPengguna struct {
 	TableAndAction
 	models.Pengguna
@@ -64,6 +68,10 @@ type NotifyResponsePayloadSeller struct {
 	ChangedColumns ChangedColumns `json:"changed_columns_seller"`
 }
 
+// ////////////////////////////////////////////////////////////////////////////
+// BARANG PAYLOAD
+// ////////////////////////////////////////////////////////////////////////////
+
 type NotifyResponsesPayloadBarang struct {
 	TableAndAction
 	models.BarangInduk
@@ -74,4 +82,13 @@ type NotifyResponsePayloadVarianBarang struct {
 	TableAndAction
 	OldData models.VarianBarang `json:"old_data"`
 	NewData models.VarianBarang `json:"new_data"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////
+// ENGAGEMENT PAYLOAD
+// ////////////////////////////////////////////////////////////////////////////
+
+type NotifyResponsePayloadKomentar struct {
+	TableAndAction
+	models.Komentar
 }

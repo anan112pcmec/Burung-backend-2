@@ -41,7 +41,6 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	}
 	fmt.Println("✅ Berhasil koneksi GORM")
 
-	// === Redis cache ===
 	redisEntityCache := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "",
@@ -51,6 +50,11 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 		Addr:     "localhost:6379",
 		Password: "",
 		DB:       2,
+	})
+	redisEngagementCache := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       3,
 	})
 
 	keysnya := "SuperSecureKey1234567890"
@@ -82,11 +86,22 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 		fmt.Println(" Berhasil Membuat Trigger Barang")
 	}
 
-	// Jalankan watcher dengan context
-	wg.Add(5)
+	if err := trigger.SetupKomentarTriggers(data.DB); err != nil {
+		fmt.Println(" Gagal Membuat Trigger Komentar", err)
+	} else {
+		fmt.Println(" Berhasil Membuat Trigger Komentar")
+	}
+
+	wg.Add(7)
 	go func() {
-		fmt.Println("Jalan NIh")
+		defer wg.Done()
+		fmt.Println("Maintain Barang Jalan")
 		maintain.BarangMaintainLoop(ctx, data.DB, redisBarangCache, SearchEngine)
+	}()
+	go func() {
+		defer wg.Done()
+		fmt.Println("Maintain Engagement Jalan")
+		maintain.EngagementMaintainLoop(ctx, data.DB, redisEngagementCache)
 	}()
 	go func() {
 		defer wg.Done()
@@ -103,6 +118,10 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	go func() {
 		defer wg.Done()
 		Varian_Barang_Watcher(ctx, dsn, data.DB)
+	}()
+	go func() {
+		defer wg.Done()
+		Komentar_Barang_Watcher(ctx, dsn, redisEngagementCache)
 	}()
 }
 
