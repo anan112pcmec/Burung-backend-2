@@ -83,7 +83,7 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	}
 
 	// Jalankan watcher dengan context
-	wg.Add(4)
+	wg.Add(5)
 	go func() {
 		fmt.Println("Jalan NIh")
 		maintain.BarangMaintainLoop(ctx, data.DB, redisBarangCache, SearchEngine)
@@ -98,7 +98,11 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	}()
 	go func() {
 		defer wg.Done()
-		Barang_Watcher(ctx, dsn, data.DB, redisBarangCache, SearchEngine)
+		Barang_Induk_Watcher(ctx, dsn, data.DB, redisBarangCache, SearchEngine)
+	}()
+	go func() {
+		defer wg.Done()
+		Varian_Barang_Watcher(ctx, dsn, data.DB)
 	}()
 }
 

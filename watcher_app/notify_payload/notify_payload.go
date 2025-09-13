@@ -69,3 +69,9 @@ type NotifyResponsesPayloadBarang struct {
 	models.BarangInduk
 	ChangedColumns ChangedColumns `json:"changed_columns"`
 }
+
+type NotifyResponsePayloadVarianBarang struct {
+	TableAndAction
+	OldData models.VarianBarang `json:"old_data"`
+	NewData models.VarianBarang `json:"new_data"`
+}

@@ -12,8 +12,13 @@ import (
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/helper"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/notify_payload"
-
 )
+
+// //////////////////////////////////////////////////////////////////////////////////////////////
+// BARANG INDUK
+// //////////////////////////////////////////////////////////////////////////////////////////////
+
+// 1. Lebih Bertujuan Untuk Melakukan Caching
 
 func BarangMasuk(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsesPayloadBarang, rds *redis.Client, SE meilisearch.ServiceManager) {
 	fmt.Println("🔔 Mulai proses caching Barang")
@@ -110,3 +115,9 @@ func HapusBarang(ctx context.Context, db *gorm.DB, data notify_payload.NotifyRes
 		fmt.Println("✅ User offline, key dihapus:", key)
 	}
 }
+
+// //////////////////////////////////////////////////////////////////////////////////////////////
+// VARIAN BARANG
+// //////////////////////////////////////////////////////////////////////////////////////////////
+
+// 1. Lebih Bertujuan Untuk Mengendalikan Barang Apalagi Jika Berkenaan dengan Transaksi
