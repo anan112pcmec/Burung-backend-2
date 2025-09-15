@@ -6,7 +6,7 @@ import (
 
 type Komentar struct {
 	ID            int64       `gorm:"primaryKey;autoIncrement" json:"id_komentar"`
-	IdBarangInduk int64       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk"`
+	IdBarangInduk int32       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk"`
 	BarangInduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID" json:"-"`
 	IdEntity      int64       `gorm:"column:id_entity;not null" json:"id_entity"`
 	JenisEntity   string      `gorm:"column:jenis_entity;type:varchar(50);not null" json:"jenis_entity"`

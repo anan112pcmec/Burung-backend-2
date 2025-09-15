@@ -263,6 +263,8 @@ func Komentar_Barang_Watcher(ctx context.Context, dsn string, engagementCache *r
 				go services.UpCacheKomentar(ctx, data, engagementCache)
 			case "UPDATE":
 				go services.EditCacheKomentar(ctx, data, engagementCache)
+			case "DELETE":
+				go services.HapusCacheKomentar(ctx, data, engagementCache)
 			default:
 				fmt.Println("⚠️ Aksi komentar tidak dikenali:", data.Action)
 			}

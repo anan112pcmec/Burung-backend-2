@@ -47,7 +47,21 @@ func UpCacheKomentar(ctx context.Context, data notify_payload.NotifyResponsePayl
 func EditCacheKomentar(ctx context.Context, data notify_payload.NotifyResponsePayloadKomentar, rds *redis.Client) {
 	key := fmt.Sprintf("komentar:%v", data.ID)
 
-	if err := rds.HSet(ctx, key, "isi_komentar", data.IsiKomentar).Err(); err != nil {
-		fmt.Println("Gagal update Redis:", err)
+	updates := map[string]interface{}{
+		"isi_komentar": data.IsiKomentar,
+	}
+
+	if err := rds.HSet(ctx, key, updates).Err(); err != nil {
+		fmt.Println("❌ Gagal update field isi_komentar di Redis:", err)
+	} else {
+		fmt.Println("✅ Komentar berhasil diupdate di Redis")
+	}
+}
+
+func HapusCacheKomentar(ctx context.Context, data notify_payload.NotifyResponsePayloadKomentar, rds *redis.Client) {
+	key := fmt.Sprintf("komentar:%v", data.ID)
+
+	if err := rds.Del(ctx, key).Err(); err != nil {
+		fmt.Println("Gagal Menghapus Komentar")
 	}
 }
