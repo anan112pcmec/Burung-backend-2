@@ -92,7 +92,13 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 		fmt.Println(" Berhasil Membuat Trigger Komentar")
 	}
 
-	wg.Add(7)
+	if err := trigger.SetupTransaksiTriggers(data.DB); err != nil {
+		fmt.Println(" Gagal Membuat Transaksi Trigger")
+	} else {
+		fmt.Println(" Berhasil Membuat Trigger Transaksi")
+	}
+
+	wg.Add(8)
 	go func() {
 		defer wg.Done()
 		fmt.Println("Maintain Barang Jalan")
@@ -122,6 +128,10 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	go func() {
 		defer wg.Done()
 		Komentar_Barang_Watcher(ctx, dsn, redisEngagementCache)
+	}()
+	go func() {
+		defer wg.Done()
+		Transaksi_Watcher(ctx, dsn, data.DB)
 	}()
 }
 

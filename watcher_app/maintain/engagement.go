@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"reflect"
-	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -56,49 +54,42 @@ func EngagementMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client) {
 			continue
 		}
 
-		// kalau tidak ada komentar, skip
 		if len(komentarList) == 0 {
 			continue
 		}
 
-		for _, k := range komentarList {
-			// Simpan detail komentar (pakai map agar bisa HSET sekali jalan)
-			fields := models.Komentar{
-				ID:            k.ID,
-				IdBarangInduk: k.IdBarangInduk,
-				IdEntity:      k.IdEntity,
-				IsiKomentar:   k.IsiKomentar,
-				JenisEntity:   k.JenisEntity,
-				ParentID:      k.ParentID,
-			}
-
-			if ada_err := rds.Del(ctx, fmt.Sprintf("komentar:%d", k.ID)).Err(); ada_err != nil {
-				continue
-			}
-
-			v := reflect.ValueOf(fields)
-			t := reflect.TypeOf(fields)
-
-			for i := 0; i < v.NumField(); i++ {
-				tag := t.Field(i).Tag.Get("json")
-				parts := strings.Split(tag, ",")
-				fieldName := parts[0]
-				if fieldName == "" {
-					fieldName = t.Field(i).Name
-				}
-
-				value := fmt.Sprintf("%v", v.Field(i).Interface()) // konversi ke string
-				if err := rds.HSet(ctx, fmt.Sprintf("komentar:%d", k.ID), fieldName, value).Err(); err != nil {
-					fmt.Println("❌ Gagal Set Redis:", err)
-				}
-			}
-
-			if err := rds.SAdd(ctx, fmt.Sprintf("komentar_barang:%d", idBarang), fmt.Sprintf("komentar:%d", k.ID)).Err(); err != nil {
-				log.Printf("❌ gagal SADD komentar %d ke barang %d: %v", k.ID, idBarang, err)
-			}
-
+		// 🧹 Bersihkan set lama untuk komentar barang ini
+		if err := rds.Del(ctx, fmt.Sprintf("komentar_barang:%d", idBarang)).Err(); err != nil {
+			log.Printf("⚠️ gagal hapus komentar_barang lama untuk barang %d: %v", idBarang, err)
 		}
 
-		log.Printf("✅ komentar barang %d berhasil dimuat ke Redis (%d komentar)", idBarang, len(komentarList))
+		for _, k := range komentarList {
+			keyKomentar := fmt.Sprintf("komentar:%d", k.ID)
+
+			// 🧹 Bersihkan komentar lama per ID
+			if err := rds.Del(ctx, keyKomentar).Err(); err != nil {
+				log.Printf("⚠️ gagal hapus komentar lama %d: %v", k.ID, err)
+			}
+
+			// 🚀 Simpan komentar (langsung tanpa reflect biar lebih efisien)
+			if err := rds.HSet(ctx, keyKomentar, map[string]interface{}{
+				"id":              k.ID,
+				"id_barang_induk": k.IdBarangInduk,
+				"id_entity":       k.IdEntity,
+				"komentar":        k.Komentar,
+				"jenis_entity":    k.JenisEntity,
+				"parent_id":       k.ParentID,
+			}).Err(); err != nil {
+				log.Printf("❌ gagal HSET Redis komentar %d: %v", k.ID, err)
+			}
+
+			// Tambahkan ke daftar komentar barang
+			if err := rds.SAdd(ctx, fmt.Sprintf("komentar_barang:%d", idBarang), keyKomentar).Err(); err != nil {
+				log.Printf("❌ gagal SADD komentar %d ke barang %d: %v", k.ID, idBarang, err)
+			}
+		}
+
+		log.Printf("✅ %d komentar barang %d berhasil dimuat ke Redis", len(komentarList), idBarang)
 	}
+
 }

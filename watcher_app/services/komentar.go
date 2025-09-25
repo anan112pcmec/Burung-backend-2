@@ -19,7 +19,7 @@ func UpCacheKomentar(ctx context.Context, data notify_payload.NotifyResponsePayl
 		ID:            data.ID,
 		IdBarangInduk: data.IdBarangInduk,
 		IdEntity:      data.IdEntity,
-		IsiKomentar:   data.IsiKomentar,
+		Komentar:      data.Komentar.Komentar,
 		JenisEntity:   data.JenisEntity,
 		ParentID:      data.ParentID,
 	}
@@ -48,7 +48,7 @@ func EditCacheKomentar(ctx context.Context, data notify_payload.NotifyResponsePa
 	key := fmt.Sprintf("komentar:%v", data.ID)
 
 	updates := map[string]interface{}{
-		"isi_komentar": data.IsiKomentar,
+		"isi_komentar": data.Komentar,
 	}
 
 	if err := rds.HSet(ctx, key, updates).Err(); err != nil {
