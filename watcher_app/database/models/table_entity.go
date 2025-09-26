@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type Status string
 
@@ -77,6 +80,19 @@ type Seller struct {
 	DeletedAt        *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
+func (s *Seller) Validating() error {
+	if s.ID == 0 {
+		return fmt.Errorf("id tidak valid")
+	}
+	if s.Username == "" {
+		return fmt.Errorf("username tidak valid")
+	}
+	if s.Email == "" {
+		return fmt.Errorf("email tidak valid")
+	}
+	return nil
+}
+
 func (Seller) TableName() string {
 	return "seller"
 }
@@ -86,12 +102,14 @@ type JenisLayananKurir string
 type Kurir struct {
 	ID               int64      `gorm:"primaryKey;autoIncrement" json:"id_kurir"`
 	Nama             string     `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama_kurir"`
+	Username         string     `gorm:"column:username;type:text;not null" json:"username_kurir"`
 	Email            string     `gorm:"column:email;type:varchar(150);not null;default:''" json:"email_kurir"`
 	Jenis            string     `gorm:"column:jenis;type:jenis_layanan_kurir;not null;default:'Reguler'" json:"jenis_kurir"`
 	PasswordHash     string     `gorm:"column:password_hash;type:varchar(250);not null;default:''" json:"pass_kurir"`
 	Deskripsi        string     `gorm:"column:deskripsi;type:text;not null;default:''" json:"deskripsi_kurir"`
 	StatusKurir      string     `gorm:"column:status;type:status;not null;default:'Offline'" json:"status_kurir"`
 	JumlahPengiriman int32      `gorm:"column:jumlah_pengiriman;type:int4;not null;default:0"`
+	Balance          int64      `gorm:"column:balance_kurir;type:int8;default:0" json:"balance_kurir"`
 	CreatedAt        time.Time  `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt        time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt        *time.Time `gorm:"index" json:"deleted_at,omitempty"`

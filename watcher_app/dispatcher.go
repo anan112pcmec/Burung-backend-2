@@ -318,7 +318,11 @@ func Transaksi_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) {
 
 			switch data.Action {
 			case "UPDATE":
-				go services.ApprovedTransaksiChange(data, dbQuery)
+				if data.Status != "Dibatalkan" {
+					go services.ApprovedTransaksiChange(data, dbQuery)
+				} else {
+					go services.UnapproveTransaksiChange(data, dbQuery)
+				}
 			default:
 				fmt.Println("⚠️ Aksi komentar tidak dikenali:", data.Action)
 			}

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
-
 )
 
 func SetupEntityTriggers(db *gorm.DB) error {
@@ -128,7 +127,7 @@ func SetupEntityTriggers(db *gorm.DB) error {
 			'id', NEW.id,
 			'nama', NEW.nama,
 			'email', NEW.email,
-			'no_hp', NEW.no_hp
+			'username', NEW.username
 		);
 		PERFORM pg_notify('kurir_channel', payload::text);
 		RETURN NEW;

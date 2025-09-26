@@ -2,6 +2,7 @@ package models
 
 import (
 	"time"
+
 )
 
 type Komentar struct {
@@ -196,4 +197,17 @@ type RekeningSeller struct {
 
 func (RekeningSeller) TableName() string {
 	return "rekening_seller"
+}
+
+type BatalTransaksi struct {
+	ID             int64     `gorm:"primaryKey;autoIncrement" json:"id_batal_transaksi"`
+	IdTransaksi    int64     `gorm:"column:id_transaksi;not null" json:"id_transaksi_batal_transaksi"`
+	ITransaksi     Transaksi `gorm:"foreignKey:IdTransaksi;references:ID" json:"-"`
+	DibatalkanOleh string    `gorm:"column:dibatalkan_oleh;type:varchar(20);not null" json:"transaksi_dibatalkan_oleh"`
+	Alasan         string    `gorm:"column:alasan;type:text;not null" json:"alasan_batal_transaksi"`
+	CreatedAt      time.Time `gorm:"autoCreateTime" json:"dibuat_pada"`
+}
+
+func (BatalTransaksi) TableName() string {
+	return "batal_transaksi"
 }

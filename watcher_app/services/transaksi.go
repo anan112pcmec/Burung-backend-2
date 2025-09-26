@@ -107,5 +107,19 @@ func ApprovedTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *go
 }
 
 func UnapproveTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *gorm.DB) {
-
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		if err_update_varian_barang := tx.Model(&models.VarianBarang{}).Where(&models.VarianBarang{
+			IdTransaksi: data.ID,
+		}).Updates(&models.VarianBarang{
+			Status:       "Down",
+			HoldBy:       0,
+			HolderEntity: " ",
+		}).Error; err_update_varian_barang != nil {
+			fmt.Println("Gagal Downkan Barang")
+			return err_update_varian_barang
+		}
+		return nil
+	}); err != nil {
+		fmt.Println("Gagal menjalankan Unapprove Transaksi Change")
+	}
 }
