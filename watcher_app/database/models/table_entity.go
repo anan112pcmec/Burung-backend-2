@@ -83,15 +83,6 @@ func (Seller) TableName() string {
 
 type JenisLayananKurir string
 
-const (
-	Reguler JenisLayananKurir = "Reguler"
-	Express JenisLayananKurir = "Express"
-	Ekonomi JenisLayananKurir = "Ekonomi"
-	Sameday JenisLayananKurir = "Sameday"
-	NextDay JenisLayananKurir = "NextDay"
-	Cargo   JenisLayananKurir = "Cargo"
-)
-
 type Kurir struct {
 	ID               int64      `gorm:"primaryKey;autoIncrement" json:"id_kurir"`
 	Nama             string     `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama_kurir"`
