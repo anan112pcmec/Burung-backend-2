@@ -108,8 +108,13 @@ type Kurir struct {
 	PasswordHash     string     `gorm:"column:password_hash;type:varchar(250);not null;default:''" json:"pass_kurir"`
 	Deskripsi        string     `gorm:"column:deskripsi;type:text;not null;default:''" json:"deskripsi_kurir"`
 	StatusKurir      string     `gorm:"column:status;type:status;not null;default:'Offline'" json:"status_kurir"`
+	StatusNarik      string     `gorm:"column:status_narik;type:status_kurir_narik;not null; default:'Off'" json:"status_narik_kurir"`
+	VerifiedKurir    bool       `gorm:"column:verified;type:boolean;not null;default:false" json:"verified_kurir"`
 	JumlahPengiriman int32      `gorm:"column:jumlah_pengiriman;type:int4;not null;default:0"`
 	Balance          int64      `gorm:"column:balance_kurir;type:int8;default:0" json:"balance_kurir"`
+	Rating           float32    `gorm:"column:rating;type:float;default:0" json:"rating_kurir"`
+	JumlahRating     int32      `gorm:"column:jumlah_rating;type:int4;default:0" json:"jumlah_rating_kurir"`
+	TipeKendaraan    string     `gorm:"column:tipe_kendaraan;type:varchar(50);default:''" json:"tipe_kendaraan_kurir"`
 	CreatedAt        time.Time  `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt        time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt        *time.Time `gorm:"index" json:"deleted_at,omitempty"`

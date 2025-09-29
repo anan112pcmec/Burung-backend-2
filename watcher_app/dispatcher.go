@@ -338,3 +338,57 @@ func Transaksi_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) {
 		}
 	}
 }
+
+func Informasi_Kurir_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) {
+	fmt.Println("Mengawasi Perubahan Informasi Kurir")
+
+	minReconn := 10 * time.Second
+	maxReconn := time.Minute
+
+	listener := pq.NewListener(dsn, minReconn, maxReconn, func(ev pq.ListenerEventType, err error) {
+		if err != nil {
+			log.Printf("[Listener Error] %v", err)
+		}
+	})
+
+	if err := listener.Listen("informasi_kurir_channel"); err != nil {
+		log.Printf("❌ Gagal listen transaksi_channel: %v", err)
+		return
+	}
+
+	ticker := time.NewTicker(90 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case n := <-listener.Notify:
+			if n == nil {
+				continue
+			}
+
+			fmt.Printf("🔔 Dapat notify Informasi Kurir: %s\n", n.Extra)
+
+			var data notify_payload.NotifyResponseInformasiKurir
+			if err := json.Unmarshal([]byte(n.Extra), &data); err != nil {
+				fmt.Println("❌ Gagal Parse JSON:", err)
+				continue
+			}
+
+			switch data.Action {
+			case "UPDATE":
+				go services.VerifiedKurir(ctx, data.IdKurir, data.StatusPerizinan, dbQuery)
+			default:
+				fmt.Println("⚠️ Aksi komentar tidak dikenali:", data.Action)
+			}
+
+		case <-ticker.C:
+			if err := listener.Ping(); err != nil {
+				log.Printf("[Ping Listener] error: %v", err)
+			}
+
+		case <-ctx.Done():
+			fmt.Println("🔴 Transaksi_Watcher dihentikan")
+			return
+		}
+	}
+}

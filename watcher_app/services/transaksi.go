@@ -107,19 +107,35 @@ func ApprovedTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *go
 }
 
 func UnapproveTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *gorm.DB) {
+	var id_varian_barangs []int64
+
+	if err_ambil_id := db.Model(&models.VarianBarang{}).
+		Where(&models.VarianBarang{
+			IdTransaksi:   data.ID,
+			IdBarangInduk: data.IdBarangInduk,
+		}).
+		Limit(int(data.Kuantitas)). // batasi sesuai jumlah kuantitas
+		Pluck("id", &id_varian_barangs).Error; err_ambil_id != nil {
+		fmt.Println("Gagal Ambil Id:", err_ambil_id)
+		return
+	}
+
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		if err_update_varian_barang := tx.Model(&models.VarianBarang{}).Where(&models.VarianBarang{
-			IdTransaksi: data.ID,
-		}).Updates(&models.VarianBarang{
-			Status:       "Down",
-			HoldBy:       0,
-			HolderEntity: " ",
-		}).Error; err_update_varian_barang != nil {
-			fmt.Println("Gagal Downkan Barang")
-			return err_update_varian_barang
+		for _, id_varian := range id_varian_barangs {
+			if err_update := tx.Model(&models.VarianBarang{}).
+				Where(models.VarianBarang{
+					ID: id_varian,
+				}).
+				Updates(&models.VarianBarang{
+					Status:       "Down",
+					HoldBy:       0,
+					HolderEntity: " ",
+				}).Error; err_update != nil {
+				return err_update
+			}
 		}
 		return nil
 	}); err != nil {
-		fmt.Println("Gagal menjalankan Unapprove Transaksi Change")
+		fmt.Println("Gagal menjalankan Unapprove Transaksi Change:", err)
 	}
 }
