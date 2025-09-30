@@ -35,7 +35,8 @@ func SetupInformasiKurirTriggers(db *gorm.DB) error {
 					'table', TG_TABLE_NAME,
 					'action', TG_OP,
 					'informasi_id_kurir', NEW.id_kurir,
-					'status_perizinan_kurir', NEW.informasi_status_perizinan
+					'status_perizinan_kurir', NEW.informasi_status_perizinan,
+					'jenis_kendaraan', 'kosong'
 				);
 				PERFORM pg_notify('informasi_kurir_channel', payload::text);
 			END IF;
@@ -63,7 +64,8 @@ func SetupInformasiKurirTriggers(db *gorm.DB) error {
 					'table', TG_TABLE_NAME,
 					'action', TG_OP,
 					'informasi_id_kurir', NEW.id_kurir,
-					'status_perizinan_kurir', NEW.informasi_status_perizinan
+					'status_perizinan_kurir', NEW.informasi_status_perizinan,
+					'jenis_kendaraan', NEW.jenis_kendaraan
 				);
 				PERFORM pg_notify('informasi_kurir_channel', payload::text);
 			END IF;

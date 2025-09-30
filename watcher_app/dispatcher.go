@@ -376,7 +376,7 @@ func Informasi_Kurir_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) 
 
 			switch data.Action {
 			case "UPDATE":
-				go services.VerifiedKurir(ctx, data.IdKurir, data.StatusPerizinan, dbQuery)
+				go services.VerifiedKurir(ctx, data.IdKurir, data.StatusPerizinan, data.JenisKendaraan, dbQuery)
 			default:
 				fmt.Println("⚠️ Aksi komentar tidak dikenali:", data.Action)
 			}

@@ -2,13 +2,15 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 )
 
-func VerifiedKurir(ctx context.Context, id_kurir int64, status_perizinan string, db *gorm.DB) {
+func VerifiedKurir(ctx context.Context, id_kurir int64, status_perizinan, jenis_kendaraan string, db *gorm.DB) {
+	fmt.Println(jenis_kendaraan)
 	if status_perizinan == "Diizinkan" {
 		var diizinkan_info_kurir string = ""
 		var diizinkan_info_kendaraan string = ""
@@ -34,5 +36,11 @@ func VerifiedKurir(ctx context.Context, id_kurir int64, status_perizinan string,
 		_ = db.Model(models.Kurir{}).Where(models.Kurir{
 			ID: id_kurir,
 		}).Update("verified", false)
+	}
+
+	if jenis_kendaraan != "" {
+		_ = db.Model(models.Kurir{}).Where(models.Kurir{
+			ID: id_kurir,
+		}).Update("tipe_kendaraan", jenis_kendaraan)
 	}
 }

@@ -35,14 +35,14 @@ func (p *Pengiriman) BiayaKirimnya(untuk string) int16 {
 type Pengiriman struct {
 	ID              int64          `gorm:"primaryKey;autoIncrement" json:"id_pengiriman"`
 	IdTransaksi     int64          `gorm:"column:id_transaksi;not null" json:"id_transaksi_pengiriman"`
-	Transaksi       Transaksi      `gorm:"foreignKey:IdTransaksi;references:ID"`
+	Transaksi       Transaksi      `gorm:"foreignKey:IdTransaksi;references:ID" json:"-"`
 	IdAlamat        int64          `gorm:"column:id_alamat;not null" json:"id_alamat_pengiriman"`
 	Alamat          AlamatPengguna `gorm:"foreignKey:IdAlamat;references:ID" json:"-"`
 	IdKurir         int64          `gorm:"id_kurir;not null" json:"id_kurir_pengiriman"`
 	NomorResi       string         `gorm:"column:nomor_resi;type:varchar(100);not null;default:''" json:"nomor_resi_pengiriman"`
-	Layanan         string         `gorm:"column:layanan;type:varchar(250);not null;default:'motor'" json:"layanan_pengiriman"`
+	Layanan         string         `gorm:"column:layanan_pengiriman_kurir;type:jenis_kendaraan_kurir;not null;default:'Unknown'" json:"layanan_pengiriman"`
 	JenisPengiriman string         `gorm:"column:jenis_pengiriman;not null;default:'reguler'" json:"jenis_pengiriman_transaksi"`
-	Status          string         `gorm:"column:status;type:status_pengiriman;not null" json:"status_pengirim"`
+	Status          string         `gorm:"column:status;type:status_pengiriman;not null" json:"status_pengiriman"`
 	BiayaKirim      int16          `gorm:"column:biaya_kirim;type:int2;not null;default:0" json:"biaya_kirim_pengiriman"`
 	KurirPaid       int32          `gorm:"column:kurir_paid;type:int4;not null;default:0" json:"kurir_paid_pengiriman"`
 	BeratTotalKG    int16          `gorm:"column:berat_total_kg;type:int2;not null;default:0" json:"berat_total_kg_pengiriman"`

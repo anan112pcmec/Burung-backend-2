@@ -28,7 +28,7 @@ func ApprovedTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *go
 					Status:      "Diproses",
 					HoldBy:      data.IdPengguna,
 				}).
-				Limit(int(data.Kuantitas)). // ⚠️ hanya jalan di MySQL
+				Limit(int(data.Kuantitas)).
 				Updates(&models.VarianBarang{Status: "Terjual"})
 
 			if q.Error != nil {
@@ -53,11 +53,6 @@ func ApprovedTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *go
 				fmt.Printf("❌ Gagal ambil biaya ongkir | TransaksiID=%d | Err=%v\n", data.ID, err_bk)
 			}
 
-			var biayalayanan int32
-			_ = tx.Model(&models.LayananPengirimanKurir{}).
-				Where(&models.LayananPengirimanKurir{NamaLayanan: data.Layanan}).
-				Select("harga_layanan").Take(&biayalayanan).Error
-
 			var id_kategori int64
 			_ = tx.Model(&models.VarianBarang{}).
 				Where(&models.VarianBarang{
@@ -74,20 +69,51 @@ func ApprovedTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *go
 				Select("berat_gram", "dimensi_lebar_cm", "dimensi_panjang_cm").
 				Take(&kategorinya).Error
 
+			beratTotalBarangPengirian := kategorinya.BeratGram * data.Kuantitas / 1000
+
+			var biayalayanan int32
+			var layanan string
+			switch {
+			case beratTotalBarangPengirian <= 10:
+				layanan = "Motor"
+				_ = tx.Model(&models.LayananPengirimanKurir{}).
+					Where(&models.LayananPengirimanKurir{NamaLayanan: layanan}).
+					Select("harga_layanan").Take(&biayalayanan).Error
+			case beratTotalBarangPengirian <= 20:
+				layanan = "Mobil"
+				_ = tx.Model(&models.LayananPengirimanKurir{}).
+					Where(&models.LayananPengirimanKurir{NamaLayanan: layanan}).
+					Select("harga_layanan").Take(&biayalayanan).Error
+			case beratTotalBarangPengirian <= 30:
+				layanan = "Pickup"
+				_ = tx.Model(&models.LayananPengirimanKurir{}).
+					Where(&models.LayananPengirimanKurir{NamaLayanan: layanan}).
+					Select("harga_layanan").Take(&biayalayanan).Error
+			default:
+				layanan = "Truk"
+				_ = tx.Model(&models.LayananPengirimanKurir{}).
+					Where(&models.LayananPengirimanKurir{NamaLayanan: layanan}).
+					Select("harga_layanan").Take(&biayalayanan).Error
+			}
+
+			biayaKirim := biayaongkir - 5000
+			kurirPaid := int32(biayaKirim) + biayalayanan
+
 			pengiriman := models.Pengiriman{
 				IdTransaksi:     data.ID,
 				IdKurir:         0,
 				NomorResi:       data.KodeOrder,
-				Layanan:         data.Layanan,
+				Layanan:         layanan,
 				JenisPengiriman: data.JenisPengiriman,
 				IdAlamat:        data.IdAlamat,
 				Status:          "Packaging",
-				BiayaKirim:      biayaongkir - 5000,
-				KurirPaid:       (int32(biayaongkir) - 5000) + biayalayanan,
-				BeratTotalKG:    kategorinya.BeratGram * data.Kuantitas / 1000,
+				BiayaKirim:      biayaKirim,
+				KurirPaid:       kurirPaid,
+				BeratTotalKG:    beratTotalBarangPengirian,
 			}
 
-			_ = tx.Create(&pengiriman).Error
+			_ = tx.Create(&pengiriman)
+
 		} else {
 			fmt.Printf("ℹ️ Status transaksi bukan 'Diproses' (Status=%s), tidak ada aksi update | TransaksiID=%d\n",
 				data.Status, data.ID)

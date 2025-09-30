@@ -31,7 +31,6 @@ type Transaksi struct {
 	IPembayaran     Pembayaran     `gorm:"foreignKey:IdPembayaran;references:ID" json:"-"`
 	KodeOrder       string         `gorm:"column:kode_order;not null" json:"kode_order_transaksi"`
 	KPembayaran     Pembayaran     `gorm:"foreignKey:KodeOrder;references:KodeOrderTransaksi" json:"-"`
-	Layanan         string         `gorm:"column:layanan_pengiriman_kurir;type:varchar(50);not null;default:'motor'" json:"layanan_pengiriman_kurir_transaksi"`
 	JenisPengiriman string         `gorm:"column:jenis_pengiriman;not null;default:'reguler'" json:"jenis_pengiriman_transaksi"`
 	Status          string         `gorm:"column:status;type:status_transaksi;not null;default:'Dibayar'" json:"status_transaksi"`
 	Metode          string         `gorm:"column:metode;type:varchar(50);not null;" json:"metode_transaksi"`

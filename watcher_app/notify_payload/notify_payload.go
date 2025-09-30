@@ -110,4 +110,5 @@ type NotifyResponseInformasiKurir struct {
 	TableAndAction
 	IdKurir         int64  `json:"informasi_id_kurir"`
 	StatusPerizinan string `json:"status_perizinan_kurir"`
+	JenisKendaraan  string `json:"jenis_kendaraan"`
 }

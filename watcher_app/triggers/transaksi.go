@@ -39,7 +39,6 @@ func SetupTransaksiTriggers(db *gorm.DB) error {
 						'kode_order_transaksi', NEW.kode_order,
 						'metode_transaksi', NEW.metode,
 						'status_transaksi', NEW.status,
-						'layanan_pengiriman_kurir_transaksi', NEW.layanan_pengiriman_kurir,
 						'jenis_pengiriman_transaksi', NEW.jenis_pengiriman,
 						'catatan_transaksi', NEW.catatan,
 						'kuantitas_barang_transaksi', NEW.kuantitas_barang,
