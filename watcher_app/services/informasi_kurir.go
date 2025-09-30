@@ -26,5 +26,13 @@ func VerifiedKurir(ctx context.Context, id_kurir int64, status_perizinan string,
 				ID: id_kurir,
 			}).Update("verified", true)
 		}
+	} else if status_perizinan == "Pending" {
+		_ = db.Model(models.Kurir{}).Where(models.Kurir{
+			ID: id_kurir,
+		}).Update("verified", false)
+	} else {
+		_ = db.Model(models.Kurir{}).Where(models.Kurir{
+			ID: id_kurir,
+		}).Update("verified", false)
 	}
 }
