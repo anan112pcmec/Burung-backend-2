@@ -2,6 +2,7 @@ package models
 
 import (
 	"time"
+
 )
 
 type StatusTransaksi string

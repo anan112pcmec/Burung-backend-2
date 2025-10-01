@@ -22,29 +22,6 @@ func ApprovedTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *go
 			fmt.Printf("📝 Preparing UPDATE VarianBarang | WHERE: {IdTransaksi:%d, Status:'Diproses', HoldBy:%d} | UPDATE: {Status:'Terjual'} | Limit=%d\n",
 				data.ID, data.IdPengguna, data.Kuantitas)
 
-			q := tx.Model(&models.VarianBarang{}).
-				Where(&models.VarianBarang{
-					IdTransaksi: data.ID,
-					Status:      "Diproses",
-					HoldBy:      data.IdPengguna,
-				}).
-				Limit(int(data.Kuantitas)).
-				Updates(&models.VarianBarang{Status: "Terjual"})
-
-			if q.Error != nil {
-				fmt.Printf("❌ ERROR executing UPDATE | TransaksiID=%d | User=%d | Kuantitas=%d | Err=%v\n",
-					data.ID, data.IdPengguna, data.Kuantitas, q.Error)
-				return q.Error
-			}
-
-			if q.RowsAffected == 0 {
-				fmt.Printf("⚠️ UPDATE executed but no rows affected | TransaksiID=%d | User=%d | Kuantitas=%d\n",
-					data.ID, data.IdPengguna, data.Kuantitas)
-			} else {
-				fmt.Printf("✅ UPDATE success | TransaksiID=%d | RowsAffected=%d | User=%d | Kuantitas=%d\n",
-					data.ID, q.RowsAffected, data.IdPengguna, data.Kuantitas)
-			}
-
 			var biayaongkir int16
 			err_bk := tx.Model(&models.Ongkir{}).
 				Where(&models.Ongkir{Nama: data.JenisPengiriman}).
@@ -66,7 +43,7 @@ func ApprovedTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *go
 			var kategorinya models.KategoriBarang
 			_ = tx.Model(&models.KategoriBarang{}).
 				Where(&models.KategoriBarang{ID: id_kategori}).
-				Select("berat_gram", "dimensi_lebar_cm", "dimensi_panjang_cm").
+				Select("berat_gram", "dimensi_lebar_cm", "dimensi_panjang_cm", "id_alamat_gudang").
 				Take(&kategorinya).Error
 
 			beratTotalBarangPengirian := kategorinya.BeratGram * data.Kuantitas / 1000
@@ -100,19 +77,43 @@ func ApprovedTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *go
 			kurirPaid := int32(biayaKirim) + biayalayanan
 
 			pengiriman := models.Pengiriman{
-				IdTransaksi:     data.ID,
-				IdKurir:         0,
-				NomorResi:       data.KodeOrder,
-				Layanan:         layanan,
-				JenisPengiriman: data.JenisPengiriman,
-				IdAlamat:        data.IdAlamat,
-				Status:          "Packaging",
-				BiayaKirim:      biayaKirim,
-				KurirPaid:       kurirPaid,
-				BeratTotalKG:    beratTotalBarangPengirian,
+				IdTransaksi:         data.ID,
+				IdKurir:             0,
+				NomorResi:           data.KodeOrder,
+				Layanan:             layanan,
+				JenisPengiriman:     data.JenisPengiriman,
+				IdAlamatPengambilan: kategorinya.IDAlamat,
+				IdAlamatPengiriman:  data.IdAlamat,
+				Status:              "Packaging",
+				BiayaKirim:          biayaKirim,
+				KurirPaid:           kurirPaid,
+				BeratTotalKG:        beratTotalBarangPengirian,
 			}
 
 			_ = tx.Create(&pengiriman)
+
+			q := tx.Model(&models.VarianBarang{}).
+				Where(&models.VarianBarang{
+					IdTransaksi: data.ID,
+					Status:      "Diproses",
+					HoldBy:      data.IdPengguna,
+				}).
+				Limit(int(data.Kuantitas)).
+				Updates(&models.VarianBarang{Status: "Terjual"})
+
+			if q.Error != nil {
+				fmt.Printf("❌ ERROR executing UPDATE | TransaksiID=%d | User=%d | Kuantitas=%d | Err=%v\n",
+					data.ID, data.IdPengguna, data.Kuantitas, q.Error)
+				return q.Error
+			}
+
+			if q.RowsAffected == 0 {
+				fmt.Printf("⚠️ UPDATE executed but no rows affected | TransaksiID=%d | User=%d | Kuantitas=%d\n",
+					data.ID, data.IdPengguna, data.Kuantitas)
+			} else {
+				fmt.Printf("✅ UPDATE success | TransaksiID=%d | RowsAffected=%d | User=%d | Kuantitas=%d\n",
+					data.ID, q.RowsAffected, data.IdPengguna, data.Kuantitas)
+			}
 
 		} else {
 			fmt.Printf("ℹ️ Status transaksi bukan 'Diproses' (Status=%s), tidak ada aksi update | TransaksiID=%d\n",
