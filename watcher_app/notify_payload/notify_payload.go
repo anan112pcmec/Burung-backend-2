@@ -112,3 +112,8 @@ type NotifyResponseInformasiKurir struct {
 	StatusPerizinan string `json:"status_perizinan_kurir"`
 	JenisKendaraan  string `json:"jenis_kendaraan"`
 }
+
+type NotifyResponsePengiriman struct {
+	TableAndAction
+	models.Pengiriman
+}
