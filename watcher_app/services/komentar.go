@@ -37,7 +37,7 @@ func UpCacheKomentar(ctx context.Context, data notify_payload.NotifyResponsePayl
 			fieldName = t.Field(i).Name
 		}
 
-		value := fmt.Sprintf("%v", v.Field(i).Interface()) // konversi ke string
+		value := fmt.Sprintf("%v", v.Field(i).Interface())
 		if err := rds.HSet(ctx, key, fieldName, value).Err(); err != nil {
 			fmt.Println("❌ Gagal Set Redis:", err)
 		}

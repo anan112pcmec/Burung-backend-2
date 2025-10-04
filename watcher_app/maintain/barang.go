@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/meilisearch/meilisearch-go"
@@ -29,7 +32,82 @@ func BarangMaintainLoop(ctx context.Context, db *gorm.DB, rds *redis.Client, SE 
 	}
 }
 
+type UpdateBarangInduk struct {
+	IdBarangInduk     int32
+	ViewedBarangInduk int32
+	LikesBarangInduk  int32
+}
+
 func BarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) {
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	keys, _ := rds.Keys(ctx, "barang:*").Result()
+
+	if len(keys) != 0 {
+		updateBarangInduk := make([]UpdateBarangInduk, 0, len(keys))
+
+		for _, k := range keys {
+			wg.Add(1)
+			go func(k string) {
+				defer wg.Done()
+
+				id := strings.TrimPrefix(k, "barang:")
+
+				jumlah_viewed, err_viewed := rds.HGet(ctx, k, "viewed_barang_induk").Result()
+				if err_viewed != nil {
+					return
+				}
+
+				jumlah_likes, err_likes := rds.HGet(ctx, k, "likes_barang_induk").Result()
+				if err_likes != nil {
+					return
+				}
+
+				id_barang_induk, err_id_barang_induk := strconv.Atoi(id)
+				if err_id_barang_induk != nil {
+					return
+				}
+
+				jumlah_viewed_barang, err_jumlah_viewed := strconv.Atoi(jumlah_viewed)
+				if err_jumlah_viewed != nil {
+					return
+				}
+
+				jumlah_likes_barang, err_jumlah_likes := strconv.Atoi(jumlah_likes)
+				if err_jumlah_likes != nil {
+					return
+				}
+
+				data := UpdateBarangInduk{
+					IdBarangInduk:     int32(id_barang_induk),
+					ViewedBarangInduk: int32(jumlah_viewed_barang),
+					LikesBarangInduk:  int32(jumlah_likes_barang),
+				}
+
+				mu.Lock()
+				updateBarangInduk = append(updateBarangInduk, data)
+				mu.Unlock()
+			}(k)
+		}
+
+		wg.Wait()
+
+		_ = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			for _, update_data := range updateBarangInduk {
+				if err_update := tx.Model(&models.BarangInduk{}).Where(&models.BarangInduk{
+					ID: update_data.IdBarangInduk,
+				}).Updates(&models.BarangInduk{
+					Viewed: update_data.ViewedBarangInduk,
+					Likes:  update_data.LikesBarangInduk,
+				}).Error; err_update != nil {
+					return err_update
+				}
+			}
+			return nil
+		})
+	}
 
 	idbar := []int32{}
 	if err := db.Model(&models.BarangInduk{}).Pluck("id", &idbar).Error; err != nil {
