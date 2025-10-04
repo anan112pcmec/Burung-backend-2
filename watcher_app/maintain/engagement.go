@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
+
 )
 
 func EngagementMaintainLoop(ctx context.Context, db *gorm.DB, rds *redis.Client) {
@@ -28,7 +29,6 @@ func EngagementMaintainLoop(ctx context.Context, db *gorm.DB, rds *redis.Client)
 func EngagementMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client) {
 	var ids []int32
 
-	// Ambil semua id barang induk
 	if errDB := db.Model(&models.BarangInduk{}).Pluck("id", &ids).Error; errDB != nil {
 		log.Printf("❌ gagal mendapatkan id barang untuk maintain komentar: %v", errDB)
 		return
@@ -48,7 +48,6 @@ func EngagementMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client) {
 			log.Printf("⚠️ gagal hapus komentar_barang lama untuk barang %d: %v", idBarang, err)
 		}
 
-		// Jika tidak ada komentar, kasih "__init__"
 		if len(komentarList) == 0 {
 			if err := rds.SAdd(ctx, keyBarang, "__init__").Err(); err != nil {
 				log.Printf("❌ gagal SADD __init__ untuk barang %d: %v", idBarang, err)
@@ -56,15 +55,12 @@ func EngagementMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client) {
 			continue
 		}
 
-		// Pakai pipeline biar lebih cepat
 		pipe := rds.Pipeline()
 		for _, k := range komentarList {
 			keyKomentar := fmt.Sprintf("komentar:%d", k.ID)
 
-			// Hapus komentar lama
 			pipe.Del(ctx, keyKomentar)
 
-			// Set ulang detail komentar
 			pipe.HSet(ctx, keyKomentar, map[string]interface{}{
 				"id":              k.ID,
 				"id_barang_induk": k.IdBarangInduk,
@@ -74,7 +70,6 @@ func EngagementMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client) {
 				"parent_id":       k.ParentID,
 			})
 
-			// Tambahkan ke set barang
 			pipe.SAdd(ctx, keyBarang, keyKomentar)
 		}
 
