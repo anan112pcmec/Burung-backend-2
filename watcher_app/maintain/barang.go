@@ -26,7 +26,8 @@ func BarangMaintainLoop(ctx context.Context, db *gorm.DB, rds *redis.Client, SE 
 			fmt.Println("❌ BarangMaintainLoop dihentikan")
 			return
 		default:
-			BarangMaintain(ctx, db, rds, SE)
+			CachingBarangMaintain(ctx, db, rds, SE)
+			InternalBarangMaintain(ctx, db)
 			time.Sleep(10 * time.Minute)
 		}
 	}
@@ -38,7 +39,7 @@ type UpdateBarangInduk struct {
 	LikesBarangInduk  int32
 }
 
-func BarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) {
+func CachingBarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) {
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -187,7 +188,7 @@ func BarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meil
 	}
 
 	var idSeller []int32
-	if err := db.Model(models.Seller{}).Pluck("id", &idSeller).Error; err != nil {
+	if err := db.Model(&models.Seller{}).Pluck("id", &idSeller).Error; err != nil {
 		fmt.Println("❌ Gagal mendapatkan ID seluruh seller:", err)
 		return
 	}
@@ -206,8 +207,8 @@ func BarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meil
 		}
 
 		var idBarangInduk []int32
-		if err := db.Model(models.BarangInduk{}).
-			Where(models.BarangInduk{SellerID: id}).
+		if err := db.Model(&models.BarangInduk{}).
+			Where(&models.BarangInduk{SellerID: id}).
 			Pluck("id", &idBarangInduk).Error; err != nil {
 			fmt.Println("❌ Gagal mendapatkan barang induk:", err)
 		}
@@ -243,18 +244,60 @@ func BarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meil
 			}
 
 			var idBarangInduk []int32
-			if err := db.Model(models.BarangInduk{}).
-				Where(models.BarangInduk{JenisBarang: helper.ConvertJenisBarang(j)}).
+			if err := db.Model(&models.BarangInduk{}).
+				Where(&models.BarangInduk{JenisBarang: helper.ConvertJenisBarang(j)}).
 				Pluck("id", &idBarangInduk).Error; err != nil {
 				fmt.Println("❌ Gagal mendapatkan barang induk:", err)
 			}
 
-			// Simpan ke Redis set
 			for _, barangID := range idBarangInduk {
 				if err := rds.SAdd(ctx, key, fmt.Sprintf("barang:%v", barangID)).Err(); err != nil {
 					fmt.Printf("⚠️ Gagal tambah barang %v ke Redis untuk seller %v: %v\n", barangID, barangID, err)
 				}
 			}
 		}(jenis)
+	}
+}
+
+func InternalBarangMaintain(ctx context.Context, db *gorm.DB) {
+
+	// EVALUATING STOK KATEGORI
+
+	var BarangInduks []models.BarangInduk
+
+	_ = db.Model(&models.BarangInduk{}).Find(&BarangInduks)
+
+	if len(BarangInduks) == 0 {
+		return
+	}
+
+	for _, bi := range BarangInduks {
+		var KategoriBarangs []models.KategoriBarang
+
+		if err := db.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+			IdBarangInduk: bi.ID,
+		}).Find(&KategoriBarangs).Error; err != nil {
+			continue
+		}
+
+		for _, kb := range KategoriBarangs {
+			var jumlah_real int64 = 0
+			_ = db.Model(&models.VarianBarang{}).Where(&models.VarianBarang{
+				IdBarangInduk: bi.ID,
+				IdKategori:    kb.ID,
+				Status:        "Ready",
+			}).Count(&jumlah_real)
+
+			if jumlah_real == 0 {
+				continue
+			}
+
+			if jumlah_real == int64(kb.Stok) {
+				continue
+			}
+
+			_ = db.Model(&kb).Updates(map[string]interface{}{
+				"stok": jumlah_real})
+		}
 	}
 }

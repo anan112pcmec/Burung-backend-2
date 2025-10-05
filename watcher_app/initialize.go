@@ -110,7 +110,7 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 		fmt.Println(" Berhasil Membuat Trigger Pengiriman")
 	}
 
-	wg.Add(10)
+	wg.Add(11)
 	go func() {
 		defer wg.Done()
 		fmt.Println("Maintain Barang Jalan")
@@ -120,6 +120,11 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 		defer wg.Done()
 		fmt.Println("Maintain Engagement Jalan")
 		maintain.EngagementMaintainLoop(ctx, data.DB, redisEngagementCache)
+	}()
+	go func() {
+		defer wg.Done()
+		fmt.Println("Maintain Entity Jalan")
+		maintain.EntityMaintainLoop(ctx, data.DB, redisEntityCache)
 	}()
 	go func() {
 		defer wg.Done()

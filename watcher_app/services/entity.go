@@ -3,12 +3,10 @@ package services
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
-	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/notify_payload"
 )
 
@@ -46,28 +44,23 @@ func UpSeller(ctx context.Context, db *gorm.DB, data notify_payload.NotifyRespon
 
 	key := fmt.Sprintf("seller_data:%v", data.ID)
 
-	fields := models.Seller{
-		ID:               data.ID,
-		Username:         data.Username,
-		Nama:             data.Nama,
-		SellerDedication: data.SellerDedication,
-		FollowerTotal:    data.FollowerTotal,
+	var fields = map[string]interface{}{
+		"id_seller":                data.ID,
+		"username_seller":          data.Username,
+		"nama_seller":              data.Nama,
+		"email_seller":             data.Email,
+		"jam_operasional_seller":   data.JamOperasional,
+		"seller_dedication_seller": data.SellerDedication,
+		"jenis_seller":             data.Jenis,
+		"punchline_seller":         data.Punchline,
+		"deskripsi_seller":         data.Deskripsi,
+		"follower_total_seller":    data.FollowerTotal,
 	}
 
-	v := reflect.ValueOf(fields)
-	t := reflect.TypeOf(fields)
-
-	for i := 0; i < v.NumField(); i++ {
-		fieldName := t.Field(i).Tag.Get("json")
-		if fieldName == "" {
-			fieldName = t.Field(i).Name
-		}
-		value := v.Field(i).Interface()
-
-		if err := rds.HSet(ctx, key, fieldName, value).Err(); err != nil {
-			fmt.Println("Gagal Set Redis:", err)
-		}
+	if err := rds.HSet(ctx, key, fields).Err(); err != nil {
+		fmt.Println("Gagal Set Redis:", err)
 	}
+
 }
 
 func HapusSeller(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsePayloadSeller, rds *redis.Client) {
