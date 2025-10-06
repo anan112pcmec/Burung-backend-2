@@ -8,7 +8,6 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/notify_payload"
-
 )
 
 func ApprovedTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *gorm.DB) {
@@ -142,7 +141,7 @@ func UnapproveTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *g
 			IdTransaksi:   data.ID,
 			IdBarangInduk: data.IdBarangInduk,
 		}).
-		Limit(int(data.Kuantitas)). // batasi sesuai jumlah kuantitas
+		Limit(int(data.Kuantitas)).
 		Pluck("id", &id_varian_barangs).Error; err_ambil_id != nil {
 		fmt.Println("Gagal Ambil Id:", err_ambil_id)
 		return
@@ -154,10 +153,10 @@ func UnapproveTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *g
 				Where(models.VarianBarang{
 					ID: id_varian,
 				}).
-				Updates(&models.VarianBarang{
-					Status:       "Down",
-					HoldBy:       0,
-					HolderEntity: " ",
+				Updates(map[string]interface{}{
+					"status":        "Down",
+					"hold_by":       0,
+					"holder_entity": nil,
 				}).Error; err_update != nil {
 				return err_update
 			}
