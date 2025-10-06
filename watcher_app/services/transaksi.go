@@ -90,7 +90,15 @@ func ApprovedTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *go
 				BeratTotalKG:        beratTotalBarangPengirian,
 			}
 
-			_ = tx.Create(&pengiriman)
+			if err := tx.Create(&pengiriman).Error; err != nil {
+				go func() {
+					_ = db.Model(&models.Transaksi{}).Where(&models.Transaksi{
+						ID: data.ID,
+					}).Update("status", "Dibayar")
+				}()
+
+				return err
+			}
 
 			q := tx.Model(&models.VarianBarang{}).
 				Where(&models.VarianBarang{
