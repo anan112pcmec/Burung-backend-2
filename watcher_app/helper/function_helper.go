@@ -2,7 +2,9 @@ package helper
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/meilisearch/meilisearch-go"
 
@@ -80,4 +82,25 @@ func BarangDataFromSearchEngine(data meilisearch.Hits) []models.BarangInduk {
 	}
 
 	return hasilnyo
+}
+
+func ShouldDelete(inputTimeStr string) bool {
+	const layout = "2006-01-02 15:04:05"
+
+	inputTime, err := time.Parse(layout, inputTimeStr)
+	if err != nil {
+		fmt.Printf("❌ Gagal parse waktu: %v\n", err)
+		return false
+	}
+
+	currentTime := time.Now()
+	duration := currentTime.Sub(inputTime)
+
+	const twentyFourHours = 24 * time.Hour
+
+	if duration >= twentyFourHours {
+		return true // Sudah lebih dari atau sama dengan 24 jam
+	}
+
+	return false // Belum mencapai 24 jam
 }
