@@ -3,28 +3,30 @@ package maintain
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/meilisearch/meilisearch-go"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 )
 
-func EntityMaintainLoop(ctx context.Context, db *gorm.DB, rds *redis.Client) {
+func EntityMaintainLoop(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) {
 	for {
 		select {
 		case <-ctx.Done():
 			fmt.Println("❌ BarangMaintainLoop dihentikan")
 			return
 		default:
-			MaintainSeller(ctx, db, rds)
+			MaintainSeller(ctx, db, rds, SE)
 			time.Sleep(10 * time.Minute)
 		}
 	}
 }
 
-func MaintainSeller(ctx context.Context, db *gorm.DB, rds *redis.Client) error {
+func MaintainSeller(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) error {
 	var sellersData []models.Seller
 	if err := db.Find(&sellersData).Error; err != nil {
 		return fmt.Errorf("gagal mengambil data seller dari DB: %w", err)
@@ -100,5 +102,26 @@ func MaintainSeller(ctx context.Context, db *gorm.DB, rds *redis.Client) error {
 	}
 
 	fmt.Printf("✅ Sinkronisasi %d seller ke Redis selesai\n", len(sellersData))
+
+	SellerAll := SE.Index("seller_all")
+	var dataSellerIndex []map[string]interface{}
+
+	for _, d := range sellersData {
+		dataSellerIndex = append(dataSellerIndex, map[string]interface{}{
+			"id":                       d.ID,
+			"nama_seller":              d.Nama,
+			"jenis_seller":             d.Jenis,
+			"seller_dedication_seller": d.SellerDedication,
+		})
+	}
+
+	task, err := SellerAll.AddDocuments(dataSellerIndex, nil)
+	if err != nil {
+		log.Fatalf("Gagal Menambahkan data seller ke meilisearch")
+	} else {
+		log.Println("Berhasil Menambahkan data Seller ke meili search")
+		log.Println(task)
+	}
+
 	return nil
 }

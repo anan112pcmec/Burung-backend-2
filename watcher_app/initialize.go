@@ -62,6 +62,7 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	SearchEngine := meilisearch.New("http://localhost:7700", meilisearch.WithAPIKey(keysnya))
 
 	barangIndukIndex := SearchEngine.Index("barang_induk_all")
+	SellerIndex := SearchEngine.Index("seller_all")
 
 	attrs := []interface{}{"jenis_barang_induk", "nama_barang_induk", "id_seller_barang_induk", "tanggal_rilis_barang_induk"}
 	task2, err2 := barangIndukIndex.UpdateFilterableAttributes(&attrs)
@@ -69,6 +70,13 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 		log.Fatal("❌ Gagal update filterable attributes:", err2)
 	}
 	log.Println("✅ Task UID:", task2.TaskUID)
+
+	attrs2 := []interface{}{"nama_seller", "jenis_seller", "seller_dedication_seller"}
+	task3, err3 := SellerIndex.UpdateFilterableAttributes(&attrs2)
+	if err3 != nil {
+		log.Fatalf("Gagal Update Filterabale atribut seller", err3)
+	}
+	log.Println("Task Seller:", task3.TaskUID)
 
 	var currentDB string
 	data.DB.Raw("SELECT current_database();").Scan(&currentDB)
@@ -124,7 +132,7 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	go func() {
 		defer wg.Done()
 		fmt.Println("Maintain Entity Jalan")
-		maintain.EntityMaintainLoop(ctx, data.DB, redisEntityCache)
+		maintain.EntityMaintainLoop(ctx, data.DB, redisEntityCache, SearchEngine)
 	}()
 	go func() {
 		defer wg.Done()
