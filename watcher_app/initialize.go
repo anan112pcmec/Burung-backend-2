@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -14,7 +13,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
+	"github.com/anan112pcmec/Burung-backend-2/watcher_app/helper"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/maintain"
+	producer_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/producer"
 	trigger "github.com/anan112pcmec/Burung-backend-2/watcher_app/triggers"
 )
 
@@ -57,9 +58,7 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 		DB:       3,
 	})
 
-	keysnya := "SuperSecureKey1234567890"
-
-	SearchEngine := meilisearch.New("http://localhost:7700", meilisearch.WithAPIKey(keysnya))
+	SearchEngine := meilisearch.New("http://localhost:7700", meilisearch.WithAPIKey(helper.Getenvi("MS_KEY", "unknown")))
 
 	barangIndukIndex := SearchEngine.Index("barang_induk_all")
 	SellerIndex := SearchEngine.Index("seller_all")
@@ -118,6 +117,11 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 		fmt.Println(" Berhasil Membuat Trigger Pengiriman")
 	}
 
+	conn_notification, err := producer_mb.UpConnectionDefaults(helper.Getenvi("RMQ_USER", "gaada"), helper.Getenvi("RMQ_PASS", "gaada"), helper.Getenvi("RMQ_PORT", "gaada"), helper.Getenvi("NOTIF_EXCHANGE", "gaada"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	wg.Add(11)
 	go func() {
 		defer wg.Done()
@@ -136,11 +140,11 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	}()
 	go func() {
 		defer wg.Done()
-		Pengguna_Watcher(ctx, dsn, data.DB, redisEntityCache)
+		Pengguna_Watcher(ctx, dsn, data.DB, redisEntityCache, conn_notification)
 	}()
 	go func() {
 		defer wg.Done()
-		Seller_Watcher(ctx, dsn, data.DB, redisEntityCache)
+		Seller_Watcher(ctx, dsn, data.DB, redisEntityCache, conn_notification)
 	}()
 	go func() {
 		defer wg.Done()
@@ -166,13 +170,9 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 		defer wg.Done()
 		Informasi_Pengiriman_Watcher(ctx, dsn, data.DB)
 	}()
-}
 
-func Getenvi(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
+	wg.Wait()
+	defer conn_notification.Close()
 }
 
 func Run() {
@@ -188,11 +188,11 @@ func Run() {
 	var watcher = Databases{}
 
 	var postgreconfig = PostgreSettings{
-		Host:   Getenvi("DBHOST", ""),
-		User:   Getenvi("DBUSER", ""),
-		Pass:   Getenvi("DBPASS", ""),
-		Port:   Getenvi("DBPORT", ""),
-		DBName: Getenvi("DBNAME", ""),
+		Host:   helper.Getenvi("DBHOST", ""),
+		User:   helper.Getenvi("DBUSER", ""),
+		Pass:   helper.Getenvi("DBPASS", ""),
+		Port:   helper.Getenvi("DBPORT", ""),
+		DBName: helper.Getenvi("DBNAME", ""),
 	}
 
 	watcher.InitializeWatcher(&postgreconfig, ctx, &wg)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/meilisearch/meilisearch-go"
@@ -103,4 +104,11 @@ func ShouldDelete(inputTimeStr string) bool {
 	}
 
 	return false // Belum mencapai 24 jam
+}
+
+func Getenvi(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
 }

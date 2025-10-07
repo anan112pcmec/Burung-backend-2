@@ -10,6 +10,7 @@ import (
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 	"github.com/meilisearch/meilisearch-go"
+	"github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
@@ -17,7 +18,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/services"
 )
 
-func Pengguna_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity_cache *redis.Client) {
+func Pengguna_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity_cache *redis.Client, conn *amqp091.Connection) {
 	fmt.Println("🟢 Mulai mengawasi pengguna_channel")
 
 	minReconn := 10 * time.Second
@@ -48,6 +49,9 @@ func Pengguna_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity
 
 				}
 
+				if data.Action == "INSERT" {
+					go services.UpUser(ctx, data, conn)
+				}
 				if data.Action == "UPDATE" {
 					if data.ChangedColumns.Status == "Online" {
 						go services.OnlinePengguna(ctx, db_query, data, entity_cache)
@@ -69,7 +73,7 @@ func Pengguna_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity
 	}
 }
 
-func Seller_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity_cache *redis.Client) {
+func Seller_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity_cache *redis.Client, conn *amqp091.Connection) {
 	fmt.Println("🟢 Mulai mengawasi seller_channel")
 
 	minReconn := 10 & time.Second
@@ -101,7 +105,7 @@ func Seller_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity_c
 				}
 
 				if data.Action == "INSERT" {
-					go services.UpSeller(ctx, db_query, data, entity_cache)
+					go services.UpSeller(ctx, db_query, data, entity_cache, conn)
 				}
 
 				if data.Action == "DELETE" {

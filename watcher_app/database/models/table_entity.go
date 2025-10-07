@@ -29,6 +29,19 @@ func (Pengguna) TableName() string {
 	return "pengguna"
 }
 
+func (p *Pengguna) RoutingKey() string {
+	RoutingKey := fmt.Sprintf("kurir.%v", p.ID)
+
+	return RoutingKey
+}
+
+func (p *Pengguna) QRGenerate() (NamaQueue string, RoutingKey string) {
+	NamaQueue = fmt.Sprintf("notification_user_%v_%s", p.ID, p.Username)
+	RoutingKey = fmt.Sprintf("user.%v", p.ID)
+
+	return
+}
+
 type JenisSeller string
 
 const (
@@ -93,8 +106,21 @@ func (s *Seller) Validating() error {
 	return nil
 }
 
+func (s *Seller) RoutingKey() string {
+	RoutingKey := fmt.Sprintf("kurir.%v", s.ID)
+
+	return RoutingKey
+}
+
 func (Seller) TableName() string {
 	return "seller"
+}
+
+func (s *Seller) QRGenerate() (NamaQueue string, RoutingKey string) {
+	NamaQueue = fmt.Sprintf("notification_seller_%v_%s", s.ID, s.Username)
+	RoutingKey = fmt.Sprintf("seller.%v", s.ID)
+
+	return
 }
 
 type JenisLayananKurir string
@@ -122,4 +148,17 @@ type Kurir struct {
 
 func (Kurir) TableName() string {
 	return "kurir"
+}
+
+func (k *Kurir) RoutingKey() string {
+	RoutingKey := fmt.Sprintf("kurir.%v", k.ID)
+
+	return RoutingKey
+}
+
+func (k *Kurir) QRGenerate() (NamaQueue string, RoutingKey string) {
+	NamaQueue = fmt.Sprintf("notification_kurir_%v_%s", k.ID, k.Username)
+	RoutingKey = fmt.Sprintf("kurir.%v", k.ID)
+
+	return
 }

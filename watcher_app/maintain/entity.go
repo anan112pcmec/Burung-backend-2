@@ -101,6 +101,22 @@ func MaintainSeller(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meil
 		return fmt.Errorf("gagal menyimpan kategori seller ke Redis: %w", err)
 	}
 
+	if err := rds.Del(ctx, "all_seller_keys").Err(); err != nil {
+		log.Printf("⚠️ Gagal menghapus all_seller_keys: %v", err)
+	}
+
+	keys := make([]interface{}, 0, len(sellersData)+1)
+	keys = append(keys, "_init_")
+	for _, s := range sellersData {
+		keys = append(keys, fmt.Sprintf("seller_data:%v", s.ID))
+	}
+
+	if err := rds.SAdd(ctx, "all_seller_keys", keys...).Err(); err != nil {
+		log.Fatalf("❌ Gagal membuat all_seller_keys: %v", err)
+	} else {
+		log.Printf("✅ Berhasil membuat all_seller_keys (%d item)", len(keys))
+	}
+
 	fmt.Printf("✅ Sinkronisasi %d seller ke Redis selesai\n", len(sellersData))
 
 	SellerAll := SE.Index("seller_all")

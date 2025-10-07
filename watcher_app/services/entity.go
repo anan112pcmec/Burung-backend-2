@@ -4,11 +4,23 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	producer_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/producer"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/notify_payload"
 )
+
+func UpUser(ctx context.Context, data notify_payload.NotifyResponsesPayloadPengguna, conn *amqp091.Connection) {
+	NamaQueue, RoutingKey := producer_mb.UserQueueRoutingKeyGenerate(data.Username, data.ID)
+
+	err := producer_mb.UpNewNotificationQueue(NamaQueue, RoutingKey, conn)
+	if err != nil {
+		fmt.Println("Gagal Up New Notification")
+		fmt.Println(err)
+	}
+}
 
 func OnlinePengguna(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsesPayloadPengguna, rds *redis.Client) {
 
@@ -39,7 +51,7 @@ func OfflinePengguna(ctx context.Context, db *gorm.DB, data notify_payload.Notif
 	}
 }
 
-func UpSeller(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsePayloadSeller, rds *redis.Client) {
+func UpSeller(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsePayloadSeller, rds *redis.Client, conn *amqp091.Connection) {
 	fmt.Println("Caching NEW Seller")
 
 	key := fmt.Sprintf("seller_data:%v", data.ID)
@@ -59,6 +71,13 @@ func UpSeller(ctx context.Context, db *gorm.DB, data notify_payload.NotifyRespon
 
 	if err := rds.HSet(ctx, key, fields).Err(); err != nil {
 		fmt.Println("Gagal Set Redis:", err)
+	}
+
+	NamaQueue, RoutingKey := producer_mb.SellerQueueRoutingKeyGenerate(data.Username, data.ID)
+
+	err := producer_mb.UpNewNotificationQueue(NamaQueue, RoutingKey, conn)
+	if err != nil {
+		fmt.Println("Gagal Up New Notification")
 	}
 
 }
