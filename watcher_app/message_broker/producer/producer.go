@@ -10,7 +10,6 @@ import (
 	"github.com/rabbitmq/amqp091-go"
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/helper"
-	"github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker"
 )
 
 // //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -205,7 +204,7 @@ func CheckQueueExists(NamaQueue string, conn *amqp091.Connection) (bool, string)
 		return true, ""
 	}
 
-	var bindings []message_broker.QueueBinding
+	var bindings []QueueBinding
 	if err := json.Unmarshal(body, &bindings); err != nil {
 		return true, ""
 	}

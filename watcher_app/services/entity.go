@@ -8,11 +8,13 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/notification"
 	producer_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/producer"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/notify_payload"
 )
 
 func UpUser(ctx context.Context, data notify_payload.NotifyResponsesPayloadPengguna, conn *amqp091.Connection) {
+	var notif notification.Notification
 	NamaQueue, RoutingKey := producer_mb.UserQueueRoutingKeyGenerate(data.Username, data.ID)
 
 	err := producer_mb.UpNotificationQueue(NamaQueue, RoutingKey, conn)
@@ -20,10 +22,15 @@ func UpUser(ctx context.Context, data notify_payload.NotifyResponsesPayloadPengg
 		fmt.Println("Gagal Up New Notification")
 		fmt.Println(err)
 	}
+
+	notif.UserAccount("Bergabung", "Hai Selamat Bergabung Di Burung ya", nil)
+	if err := notif.PublishMessageCritical(RoutingKey, conn); err != nil {
+		fmt.Println("Gagal Publish Pesan Pada User: ", data.Nama, err)
+	}
 }
 
-func OnlinePengguna(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsesPayloadPengguna, rds *redis.Client) {
-
+func OnlinePengguna(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsesPayloadPengguna, rds *redis.Client, conn *amqp091.Connection) {
+	var notif notification.Notification
 	fmt.Println("Caching Online User")
 
 	key := fmt.Sprintf("pengguna_online:%v", data.ID)
@@ -38,6 +45,12 @@ func OnlinePengguna(ctx context.Context, db *gorm.DB, data notify_payload.Notify
 		if err := rds.HSet(ctx, key, field, value).Err(); err != nil {
 			fmt.Println("Gagal Set Redis:", err)
 		}
+	}
+
+	notif.UserAccount("Login", "Kamu Login ya", nil)
+	_, Routingkey := producer_mb.UserQueueRoutingKeyGenerate(data.Username, data.ID)
+	if err := notif.PublishMessageCritical(Routingkey, conn); err != nil {
+		fmt.Println("Gagal Notif User Login")
 	}
 }
 

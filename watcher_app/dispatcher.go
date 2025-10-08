@@ -54,7 +54,7 @@ func Pengguna_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity
 				}
 				if data.Action == "UPDATE" {
 					if data.ChangedColumns.Status == "Online" {
-						go services.OnlinePengguna(ctx, db_query, data, entity_cache)
+						go services.OnlinePengguna(ctx, db_query, data, entity_cache, conn)
 					} else if data.ChangedColumns.Status == "Offline" {
 						go services.OfflinePengguna(ctx, db_query, data, entity_cache)
 					}

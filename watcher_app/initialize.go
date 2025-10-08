@@ -74,7 +74,7 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	attrs2 := []interface{}{"nama_seller", "jenis_seller", "seller_dedication_seller"}
 	task3, err3 := SellerIndex.UpdateFilterableAttributes(&attrs2)
 	if err3 != nil {
-		log.Fatalf("Gagal Update Filterabale atribut seller", err3)
+		log.Fatalf("Gagal Update Filterabale atribut seller %s", err3)
 	}
 	log.Println("Task Seller:", task3.TaskUID)
 

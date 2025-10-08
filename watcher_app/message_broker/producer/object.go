@@ -1,4 +1,9 @@
-package message_broker
+package producer_mb
+
+// ///////////////////////////////////////////////////////////
+// QueueBinding
+// ///////////////////////////////////////////////////////////
+// :Berfungsi sebagai struct untuk memastikan sebuah queue
 
 type QueueBinding struct {
 	Source          string                 `json:"source"`
