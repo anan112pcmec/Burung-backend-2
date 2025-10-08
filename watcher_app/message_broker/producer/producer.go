@@ -1,13 +1,22 @@
 package producer_mb
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 
 	"github.com/rabbitmq/amqp091-go"
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/helper"
+	"github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker"
 )
+
+// //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Up Connection
+// //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// :Berfungsi Saat Sistem Pertama Kali Jalan Akan Auto Membuat Koneksi Dan Beberapa Queue Default
 
 func UpConnectionDefaults(username, password, port, exchange string) (*amqp091.Connection, error) {
 	connStr := fmt.Sprintf("amqp://%s:%s@localhost:%s", username, password, port)
@@ -65,26 +74,12 @@ func UpConnectionDefaults(username, password, port, exchange string) (*amqp091.C
 	return connection, nil
 }
 
-func PublishMessageChannel(exchange, routingKey string, conn *amqp091.Connection, body []byte) error {
-	ch, err := conn.Channel()
-	if err != nil {
-		return fmt.Errorf("failed to create channel: %w", err)
-	}
-	defer ch.Close()
+// //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Up Queue Dan Down Queue
+// //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// :Berfungsi Untuk Membuat Queue Baru Dan Menghapus Queue Yang Sudah AdA
 
-	return ch.Publish(
-		exchange,
-		routingKey,
-		false,
-		false,
-		amqp091.Publishing{
-			ContentType: "text/plain",
-			Body:        body,
-		},
-	)
-}
-
-func UpNewNotificationQueue(NamaQueue, RoutingKey string, conn *amqp091.Connection) error {
+func UpNotificationQueue(NamaQueue, RoutingKey string, conn *amqp091.Connection) error {
 	ch, err := conn.Channel()
 	if err != nil {
 		return fmt.Errorf("gagal membuat channel RabbitMQ: %w", err)
@@ -117,16 +112,42 @@ func UpNewNotificationQueue(NamaQueue, RoutingKey string, conn *amqp091.Connecti
 	return nil
 }
 
-func SellerQueueRoutingKeyGenerate(username string, id int32) (NamaQueue string, RoutingKey string) {
-	NamaQueue = fmt.Sprintf("notification_seller_%v_%s", id, username)
-	RoutingKey = fmt.Sprintf("seller.%v", id)
+func DownNotificationQueue(NamaQueue string, conn *amqp091.Connection) error {
+	ch, err := conn.Channel()
+	if err != nil {
+		return fmt.Errorf("gagal membuka channel RabbitMQ: %w", err)
+	}
+	defer ch.Close()
 
-	return
+	_, err = ch.QueueDelete(
+		NamaQueue,
+		false,
+		false,
+		false,
+	)
+	if err != nil {
+		return fmt.Errorf("gagal menghapus queue %s: %w", NamaQueue, err)
+	}
+
+	return nil
 }
+
+// //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Entity Queue And Routing Key
+// //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// :Berfungsi Merilis Nama Queue dan Routing Key sesuai jenis Entity mereka bertujuan supaya semua sama rata dan
+// mencegah boilerplate
 
 func UserQueueRoutingKeyGenerate(username string, id int64) (NamaQueue string, RoutingKey string) {
 	NamaQueue = fmt.Sprintf("notification_user_%v_%s", id, username)
 	RoutingKey = fmt.Sprintf("user.%v", id)
+
+	return
+}
+
+func SellerQueueRoutingKeyGenerate(username string, id int32) (NamaQueue string, RoutingKey string) {
+	NamaQueue = fmt.Sprintf("notification_seller_%v_%s", id, username)
+	RoutingKey = fmt.Sprintf("seller.%v", id)
 
 	return
 }
@@ -136,4 +157,68 @@ func KurirQueueRoutingKeyGenerate(username string, id int64) (NamaQueue string, 
 	RoutingKey = fmt.Sprintf("kurir.%v", id)
 
 	return
+}
+
+// //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Queue Check
+// //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// :Berfungsi Untuk Mengecek apakah sebuah Queue sudah eksis dan routing key-nya.
+
+func CheckQueueExists(NamaQueue string, conn *amqp091.Connection) (bool, string) {
+	ch, err := conn.Channel()
+	if err != nil {
+		return false, ""
+	}
+	defer ch.Close()
+
+	_, err = ch.QueueDeclarePassive(
+		NamaQueue,
+		true,  // durable
+		false, // autoDelete
+		false, // exclusive
+		false, // noWait
+		nil,
+	)
+	if err != nil {
+		if amqpErr, ok := err.(*amqp091.Error); ok && amqpErr.Code == 404 {
+			return false, ""
+		}
+		return false, ""
+	}
+
+	// Ambil binding info dari RabbitMQ Management API
+	url := fmt.Sprintf("http://localhost:15672/api/queues/%%2F/%s/bindings", NamaQueue)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.SetBasicAuth(
+		helper.Getenvi("RMQ_USER", "guest"),
+		helper.Getenvi("RMQ_PASS", "guest"),
+	)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return true, ""
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return true, ""
+	}
+
+	var bindings []message_broker.QueueBinding
+	if err := json.Unmarshal(body, &bindings); err != nil {
+		return true, ""
+	}
+
+	if len(bindings) == 0 {
+		return true, ""
+	}
+
+	for _, b := range bindings {
+		if b.RoutingKey != "" {
+			return true, b.RoutingKey
+		}
+	}
+
+	return true, ""
 }

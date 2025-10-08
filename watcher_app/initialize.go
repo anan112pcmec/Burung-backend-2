@@ -15,6 +15,7 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/helper"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/maintain"
+	maintain_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/maintain"
 	producer_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/producer"
 	trigger "github.com/anan112pcmec/Burung-backend-2/watcher_app/triggers"
 )
@@ -122,7 +123,7 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 		log.Fatal(err)
 	}
 
-	wg.Add(11)
+	wg.Add(12)
 	go func() {
 		defer wg.Done()
 		fmt.Println("Maintain Barang Jalan")
@@ -169,6 +170,10 @@ func (data *Databases) InitializeWatcher(psg *PostgreSettings, ctx context.Conte
 	go func() {
 		defer wg.Done()
 		Informasi_Pengiriman_Watcher(ctx, dsn, data.DB)
+	}()
+	go func() {
+		defer wg.Done()
+		maintain_mb.NotificationMaintainLoop(ctx, data.DB, conn_notification)
 	}()
 
 	wg.Wait()

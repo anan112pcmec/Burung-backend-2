@@ -15,7 +15,7 @@ import (
 func UpUser(ctx context.Context, data notify_payload.NotifyResponsesPayloadPengguna, conn *amqp091.Connection) {
 	NamaQueue, RoutingKey := producer_mb.UserQueueRoutingKeyGenerate(data.Username, data.ID)
 
-	err := producer_mb.UpNewNotificationQueue(NamaQueue, RoutingKey, conn)
+	err := producer_mb.UpNotificationQueue(NamaQueue, RoutingKey, conn)
 	if err != nil {
 		fmt.Println("Gagal Up New Notification")
 		fmt.Println(err)
@@ -75,7 +75,7 @@ func UpSeller(ctx context.Context, db *gorm.DB, data notify_payload.NotifyRespon
 
 	NamaQueue, RoutingKey := producer_mb.SellerQueueRoutingKeyGenerate(data.Username, data.ID)
 
-	err := producer_mb.UpNewNotificationQueue(NamaQueue, RoutingKey, conn)
+	err := producer_mb.UpNotificationQueue(NamaQueue, RoutingKey, conn)
 	if err != nil {
 		fmt.Println("Gagal Up New Notification")
 	}
