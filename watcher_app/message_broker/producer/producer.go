@@ -17,17 +17,12 @@ import (
 // //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // :Berfungsi Saat Sistem Pertama Kali Jalan Akan Auto Membuat Koneksi Dan Beberapa Queue Default
 
-func UpConnectionDefaults(username, password, port, exchange string) (*amqp091.Connection, error) {
-	connStr := fmt.Sprintf("amqp://%s:%s@localhost:%s", username, password, port)
-	connection, err := amqp091.Dial(connStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect RabbitMQ: %w", err)
-	}
+func UpConnectionDefaults(username, password, port, exchange string, connection *amqp091.Connection) error {
 
 	ch, err := connection.Channel()
 	if err != nil {
 		connection.Close()
-		return nil, fmt.Errorf("failed to create channel: %w", err)
+		return err
 	}
 
 	err = ch.ExchangeDeclare(
@@ -42,7 +37,7 @@ func UpConnectionDefaults(username, password, port, exchange string) (*amqp091.C
 	if err != nil {
 		ch.Close()
 		connection.Close()
-		return nil, fmt.Errorf("failed to declare exchange: %w", err)
+		return err
 	}
 
 	staticQueues := map[string]string{
@@ -57,20 +52,20 @@ func UpConnectionDefaults(username, password, port, exchange string) (*amqp091.C
 		if err != nil {
 			ch.Close()
 			connection.Close()
-			return nil, fmt.Errorf("failed to declare queue %s: %w", qName, err)
+			return err
 		}
 
 		err = ch.QueueBind(qName, routingKey, exchange, false, nil)
 		if err != nil {
 			ch.Close()
 			connection.Close()
-			return nil, fmt.Errorf("failed to bind queue %s: %w", qName, err)
+			return err
 		}
 	}
 
 	log.Println("✅ RabbitMQ channel, exchange, & queues ready")
 
-	return connection, nil
+	return nil
 }
 
 // //////////////////////////////////////////////////////////////////////////////////////////////////////////////

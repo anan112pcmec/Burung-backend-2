@@ -11,23 +11,22 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 	producer_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/producer"
-
 )
 
-func NotificationMaintainLoop(ctx context.Context, db *gorm.DB, conn *amqp091.Connection) {
+func NotificationMaintainLoop(ctx context.Context, db *gorm.DB, conn *amqp091.Connection, Exchange string) {
 	for {
 		select {
 		case <-ctx.Done():
 			fmt.Println("❌ Entity Maintain Notification dihentikan")
 			return
 		default:
-			MaintainEntityNotifQueue(ctx, db, conn)
+			MaintainEntityNotifQueue(ctx, db, conn, Exchange)
 			time.Sleep(10 * time.Minute)
 		}
 	}
 }
 
-func MaintainEntityNotifQueue(ctx context.Context, db *gorm.DB, conn *amqp091.Connection) {
+func MaintainEntityNotifQueue(ctx context.Context, db *gorm.DB, conn *amqp091.Connection, Exchange string) {
 	var (
 		users   []models.Pengguna
 		sellers []models.Seller

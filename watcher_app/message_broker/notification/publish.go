@@ -15,7 +15,7 @@ import (
 // :Berfungsi Publish Message Ke Routing Key Tertentu, dan LevelMessage
 
 func (n *Notification) PublishMessageCritical(routingKey string, conn *amqp091.Connection) error {
-	exchange := helper.Getenvi("NOTIF_EXCHANGE", "NULL")
+	exchange := helper.Getenvi("RMQ_NOTIF_EXCHANGE", "NULL")
 	if n.Level != "critical" {
 		return fmt.Errorf("hanya pesan critical yang Boleh dipublish dengan method ini")
 	}
