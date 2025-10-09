@@ -7,6 +7,7 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/maintain"
 	maintain_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/maintain"
+	producer_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/producer"
 	trigger "github.com/anan112pcmec/Burung-backend-2/watcher_app/triggers"
 )
 
@@ -46,6 +47,10 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 		fmt.Println(" Gagal Membuat Pengiriman Trigger")
 	} else {
 		fmt.Println(" Berhasil Membuat Trigger Pengiriman")
+	}
+
+	if err := producer_mb.UpConnectionDefaults(Exchange, connection.NOTIFICATION); err != nil {
+		fmt.Println(err)
 	}
 
 	wg.Add(12)

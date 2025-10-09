@@ -17,7 +17,7 @@ import (
 // //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // :Berfungsi Saat Sistem Pertama Kali Jalan Akan Auto Membuat Koneksi Dan Beberapa Queue Default
 
-func UpConnectionDefaults(username, password, port, exchange string, connection *amqp091.Connection) error {
+func UpConnectionDefaults(exchange string, connection *amqp091.Connection) error {
 
 	ch, err := connection.Channel()
 	if err != nil {
