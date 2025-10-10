@@ -19,19 +19,20 @@ func UpUser(ctx context.Context, data notify_payload.NotifyResponsesPayloadPengg
 
 	err := producer_mb.UpNotificationQueue(NamaQueue, RoutingKey, conn)
 	if err != nil {
-		fmt.Println("Gagal Up New Notification")
-		fmt.Println(err)
+		fmt.Printf("[ERROR] Gagal membuat queue notifikasi untuk user '%s' (ID: %v): %v\n", data.Username, data.ID, err)
 	}
 
-	notif.UserAccount("Bergabung", "Hai Selamat Bergabung Di Burung ya", nil)
+	notif.UserAccount("Bergabung", "Hai Selamat Bergabung di Burung!", nil)
 	if err := notif.PublishMessageCritical(RoutingKey, conn); err != nil {
-		fmt.Println("Gagal Publish Pesan Pada User: ", data.Nama, err)
+		fmt.Printf("[ERROR] Gagal publish pesan notifikasi ke user '%s' (ID: %v): %v\n", data.Username, data.ID, err)
+	} else {
+		fmt.Printf("[INFO] Notifikasi bergabung berhasil dikirim ke user '%s' (ID: %v)\n", data.Username, data.ID)
 	}
 }
 
 func OnlinePengguna(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsesPayloadPengguna, rds *redis.Client, conn *amqp091.Connection) {
 	var notif notification.Notification
-	fmt.Println("Caching Online User")
+	fmt.Printf("[INFO] Menyimpan status online user '%s' (ID: %v) ke Redis\n", data.Username, data.ID)
 
 	key := fmt.Sprintf("pengguna_online:%v", data.ID)
 
@@ -43,14 +44,16 @@ func OnlinePengguna(ctx context.Context, db *gorm.DB, data notify_payload.Notify
 
 	for field, value := range fields {
 		if err := rds.HSet(ctx, key, field, value).Err(); err != nil {
-			fmt.Println("Gagal Set Redis:", err)
+			fmt.Printf("[ERROR] Gagal set field '%s' untuk user '%s' (ID: %v) di Redis: %v\n", field, data.Username, data.ID, err)
 		}
 	}
 
-	notif.UserAccount("Login", "Kamu Login ya", nil)
+	notif.UserAccount("Login", "Kamu Telah login pada pukul dan jam .", nil)
 	_, Routingkey := producer_mb.UserQueueRoutingKeyGenerate(data.Username, data.ID)
 	if err := notif.PublishMessageCritical(Routingkey, conn); err != nil {
-		fmt.Println("Gagal Notif User Login")
+		fmt.Printf("[ERROR] Gagal mengirim notifikasi login ke user '%s' (ID: %v): %v\n", data.Username, data.ID, err)
+	} else {
+		fmt.Printf("[INFO] Notifikasi login berhasil dikirim ke user '%s' (ID: %v)\n", data.Username, data.ID)
 	}
 }
 
@@ -58,14 +61,14 @@ func OfflinePengguna(ctx context.Context, db *gorm.DB, data notify_payload.Notif
 	key := fmt.Sprintf("pengguna_online:%v", data.ID)
 
 	if err := rds.Del(ctx, key).Err(); err != nil {
-		fmt.Println("Gagal Hapus Redis Key:", err)
+		fmt.Printf("[ERROR] Gagal menghapus key Redis untuk user offline (key: %s): %v\n", key, err)
 	} else {
-		fmt.Println("✅ User offline, key dihapus:", key)
+		fmt.Printf("[INFO] User offline, key Redis dihapus: %s\n", key)
 	}
 }
 
 func UpSeller(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsePayloadSeller, rds *redis.Client, conn *amqp091.Connection) {
-	fmt.Println("Caching NEW Seller")
+	fmt.Printf("[INFO] Menyimpan data seller baru '%s' (ID: %v) ke Redis\n", data.Username, data.ID)
 
 	key := fmt.Sprintf("seller_data:%v", data.ID)
 
@@ -83,15 +86,21 @@ func UpSeller(ctx context.Context, db *gorm.DB, data notify_payload.NotifyRespon
 	}
 
 	if err := rds.HSet(ctx, key, fields).Err(); err != nil {
-		fmt.Println("Gagal Set Redis:", err)
+		fmt.Printf("[ERROR] Gagal menyimpan data seller '%s' (ID: %v) ke Redis: %v\n", data.Username, data.ID, err)
 	}
 
 	NamaQueue, RoutingKey := producer_mb.SellerQueueRoutingKeyGenerate(data.Username, data.ID)
 
 	err := producer_mb.UpNotificationQueue(NamaQueue, RoutingKey, conn)
 	if err != nil {
-		fmt.Println("Gagal Up New Notification")
+		fmt.Printf("[ERROR] Gagal membuat queue notifikasi untuk seller '%s' (ID: %v): %v\n", data.Username, data.ID, err)
+	} else {
+		fmt.Printf("[INFO] Queue notifikasi seller '%s' (ID: %v) berhasil dibuat\n", data.Username, data.ID)
 	}
+
+	var notif notification.Notification
+
+	notif.SellerAccount("Bergabung", "Hai Selamat datang dan bergabung di burung ya", nil)
 
 }
 
@@ -99,8 +108,8 @@ func HapusSeller(ctx context.Context, db *gorm.DB, data notify_payload.NotifyRes
 	key := fmt.Sprintf("seller_data:%v", data.ID)
 
 	if err := rds.Del(ctx, key).Err(); err != nil {
-		fmt.Println("Gagal Hapus Redis Key:", err)
+		fmt.Printf("[ERROR] Gagal menghapus key Redis untuk seller (key: %s): %v\n", key, err)
 	} else {
-		fmt.Println("✅ seller dihapus, key dihapus:", key)
+		fmt.Printf("[INFO] Seller dihapus, key Redis dihapus: %s\n", key)
 	}
 }

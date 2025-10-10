@@ -99,5 +99,24 @@ func (e *Environment) RunConnectionEnvironment() (
 
 	search_engine = meilisearch.New(fmt.Sprintf("http://%s:%s", e.MEILIHOST, e.MEILIPORT), meilisearch.WithAPIKey(e.MEILIKEY))
 
+	barangIndukIndex := search_engine.Index("barang_induk_all")
+	sellerIndex := search_engine.Index("seller_all")
+
+	attrs := []interface{}{"jenis_barang_induk", "nama_barang_induk", "id_seller_barang_induk", "tanggal_rilis_barang_induk"}
+	task2, err2 := barangIndukIndex.UpdateFilterableAttributes(&attrs)
+	if err2 != nil {
+		log.Fatal("❌ Gagal update filterable attributes:", err2)
+	}
+
+	fmt.Println(task2)
+
+	attrs1 := []interface{}{"id_seller", "nama_seller", "jenis_seller", "seller_dedication_seller"}
+	task3, err3 := sellerIndex.UpdateFilterableAttributes(&attrs1)
+	if err3 != nil {
+		log.Fatal("❌ Gagal update filterable attributes:", err3)
+	}
+
+	fmt.Println(task3)
+
 	return
 }

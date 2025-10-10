@@ -15,6 +15,7 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/helper"
+
 )
 
 // convertJenisBarang akan mengubah nama jenis internal jadi format DB
@@ -43,6 +44,8 @@ func CachingBarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, 
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
+
+	// Evaluasi Internal db Dari Cache
 
 	keys, _ := rds.Keys(ctx, "barang:*").Result()
 
@@ -109,6 +112,8 @@ func CachingBarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, 
 			return nil
 		})
 	}
+
+	// Evaluasi Cache dari internal db
 
 	idbar := []int32{}
 	if err := db.Model(&models.BarangInduk{}).Pluck("id", &idbar).Error; err != nil {
@@ -299,5 +304,34 @@ func InternalBarangMaintain(ctx context.Context, db *gorm.DB) {
 			_ = db.Model(&kb).Updates(map[string]interface{}{
 				"stok": jumlah_real})
 		}
+	}
+
+	// EVALUATING STATUS VARIAN BARANG
+
+	var varian_barang []models.VarianBarang
+
+	_ = db.Model(&models.VarianBarang{}).Where(&models.VarianBarang{Status: "Down"}).Or(&models.VarianBarang{Status: "Ready"}).Find(&varian_barang)
+
+	var idErrorDown []int64
+
+	for _, vb := range varian_barang {
+		if vb.HoldBy != 0 || vb.HolderEntity != "" {
+			idErrorDown = append(idErrorDown, vb.ID)
+		}
+	}
+
+	if len(idErrorDown) > 0 {
+		if err := db.Model(&models.VarianBarang{}).
+			Where("id IN ?", idErrorDown).
+			Updates(map[string]interface{}{
+				"hold_by":       0,
+				"holder_entity": "",
+			}).Error; err != nil {
+			log.Println("Gagal memperbarui data varian:", err)
+		} else {
+			log.Printf("Berhasil mereset %d varian yang statusnya Down.\n", len(idErrorDown))
+		}
+	} else {
+		log.Println("Tidak ada varian Down yang masih di-hold.")
 	}
 }

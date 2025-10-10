@@ -227,65 +227,7 @@ func Varian_Barang_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) {
 	}
 }
 
-func Komentar_Barang_Watcher(ctx context.Context, dsn string, engagementCache *redis.Client) {
-	fmt.Println("Mengawasi Perubahan Seluruh Data Komentar Barang")
-
-	minReconn := 10 * time.Second
-	maxReconn := time.Minute
-
-	listener := pq.NewListener(dsn, minReconn, maxReconn, func(ev pq.ListenerEventType, err error) {
-		if err != nil {
-			log.Printf("[Listener Error] %v", err)
-		}
-	})
-
-	if err := listener.Listen("komentar_channel"); err != nil {
-		log.Printf("❌ Gagal listen komentar_channel: %v", err)
-		return
-	}
-
-	ticker := time.NewTicker(90 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case n := <-listener.Notify:
-			if n == nil {
-				continue
-			}
-
-			fmt.Printf("🔔 Dapat notify Komentar: %s\n", n.Extra)
-
-			var data notify_payload.NotifyResponsePayloadKomentar
-			if err := json.Unmarshal([]byte(n.Extra), &data); err != nil {
-				fmt.Println("❌ Gagal Parse JSON:", err)
-				continue
-			}
-
-			switch data.Action {
-			case "INSERT":
-				go services.UpCacheKomentar(ctx, data, engagementCache)
-			case "UPDATE":
-				go services.EditCacheKomentar(ctx, data, engagementCache)
-			case "DELETE":
-				go services.HapusCacheKomentar(ctx, data, engagementCache)
-			default:
-				fmt.Println("⚠️ Aksi komentar tidak dikenali:", data.Action)
-			}
-
-		case <-ticker.C:
-			if err := listener.Ping(); err != nil {
-				log.Printf("[Ping Listener] error: %v", err)
-			}
-
-		case <-ctx.Done():
-			fmt.Println("🔴 Komentar_Barang_Watcher dihentikan")
-			return
-		}
-	}
-}
-
-func Transaksi_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) {
+func Transaksi_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB, conn *amqp091.Connection) {
 	fmt.Println("Mengawasi Perubahan Transaksi")
 
 	minReconn := 10 * time.Second
@@ -323,9 +265,9 @@ func Transaksi_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) {
 			switch data.Action {
 			case "UPDATE":
 				if data.Status != "Dibatalkan" {
-					go services.ApprovedTransaksiChange(data, dbQuery)
+					go services.ApprovedTransaksiChange(data, dbQuery, conn)
 				} else {
-					go services.UnapproveTransaksiChange(data, dbQuery)
+					go services.UnapproveTransaksiChange(data, dbQuery, conn)
 				}
 			default:
 				fmt.Println("⚠️ Aksi komentar tidak dikenali:", data.Action)

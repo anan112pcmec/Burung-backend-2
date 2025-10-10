@@ -125,6 +125,7 @@ func MaintainSeller(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meil
 	for _, d := range sellersData {
 		dataSellerIndex = append(dataSellerIndex, map[string]interface{}{
 			"id":                       d.ID,
+			"id_seller":                d.ID,
 			"nama_seller":              d.Nama,
 			"jenis_seller":             d.Jenis,
 			"seller_dedication_seller": d.SellerDedication,

@@ -53,7 +53,7 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 		fmt.Println(err)
 	}
 
-	wg.Add(12)
+	wg.Add(11)
 	go func() {
 		defer wg.Done()
 		fmt.Println("Maintain Barang Jalan")
@@ -87,11 +87,7 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 	}()
 	go func() {
 		defer wg.Done()
-		Komentar_Barang_Watcher(ctx, dsn, connection.RDSENGAGEMENT)
-	}()
-	go func() {
-		defer wg.Done()
-		Transaksi_Watcher(ctx, dsn, connection.DB)
+		Transaksi_Watcher(ctx, dsn, connection.DB, connection.NOTIFICATION)
 	}()
 	go func() {
 		defer wg.Done()
