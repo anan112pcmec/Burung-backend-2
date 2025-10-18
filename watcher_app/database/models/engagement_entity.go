@@ -60,16 +60,17 @@ func (BarangDisukai) TableName() string {
 }
 
 type EntitySocialMedia struct {
-	ID        int64      `gorm:"primaryKey;autoIncrement" json:"id_social_media"`
-	EntityId  int64      `gorm:"column:entity_id;type:int8;not null" json:"entity_id_social_media"`
-	Whatsapp  string     `gorm:"column:whatsapp;type:varchar(20)" json:"whatsapp_social_media"`
-	Facebook  string     `gorm:"column:facebook;type:text" json:"facebook_social_media"`
-	TikTok    string     `gorm:"column:tiktok;type:text" json:"tiktok_social_media"`
-	Instagram string     `gorm:"column:instagram;type:text" json:"instagram_social_media"`
-	Metadata  []byte     `gorm:"column:metadata;type:bytea" json:"metadata_social_media"`
-	CreatedAt time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt *time.Time `gorm:"index"`
+	ID         int64      `gorm:"primaryKey;autoIncrement" json:"id_social_media"`
+	EntityId   int64      `gorm:"column:entity_id;type:int8;not null" json:"entity_id_social_media"`
+	Whatsapp   string     `gorm:"column:whatsapp;type:varchar(20)" json:"whatsapp_social_media"`
+	Facebook   string     `gorm:"column:facebook;type:text" json:"facebook_social_media"`
+	TikTok     string     `gorm:"column:tiktok;type:text" json:"tiktok_social_media"`
+	Instagram  string     `gorm:"column:instagram;type:text" json:"instagram_social_media"`
+	Metadata   []byte     `gorm:"column:metadata;type:bytea" json:"metadata_social_media"`
+	EntityType string     `gorm:"column:entity_type;type:varchar(20);not null" json:"entity_type_social_media"`
+	CreatedAt  time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt  time.Time  `gorm:"autoUpdateTime"`
+	DeletedAt  *time.Time `gorm:"index"`
 }
 
 func (EntitySocialMedia) TableName() string {

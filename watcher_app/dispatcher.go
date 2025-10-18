@@ -404,3 +404,59 @@ func Informasi_Pengiriman_Watcher(ctx context.Context, dsn string, dbQuery *gorm
 		}
 	}
 }
+
+func Follower_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB, entity_cache *redis.Client) {
+	fmt.Println("Menjalankan Follower Watcher")
+
+	minReconn := 10 * time.Second
+	maxReconn := time.Minute
+
+	listener := pq.NewListener(dsn, minReconn, maxReconn, func(event pq.ListenerEventType, err error) {
+		if err != nil {
+			log.Printf("[Listener Error] %v", err)
+		}
+	})
+
+	if err := listener.Listen("follower_channel"); err != nil {
+		log.Printf("❌ Gagal listen follower_channel: %v", err)
+		return
+	}
+
+	ticker := time.NewTicker(90 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case n := <-listener.Notify:
+			if n == nil {
+				continue
+			}
+
+			fmt.Printf("🔔 Dapat notify informasi pengiriman: %s\n", n.Extra)
+
+			var data notify_payload.NotifyResponseFollower
+			if err := json.Unmarshal([]byte(n.Extra), &data); err != nil {
+				fmt.Println("❌ Gagal parse JSON:", err)
+				continue
+			}
+
+			switch data.Action {
+			case "INSERT":
+				go services.SellerFollowed(ctx, data, dbQuery, entity_cache)
+			case "DELETE":
+				go services.SellerUnfollowed(ctx, data, dbQuery, entity_cache)
+			default:
+				fmt.Println("⚠️ Aksi pengiriman tidak dikenali:", data.Action)
+			}
+
+		case <-ticker.C:
+			if err := listener.Ping(); err != nil {
+				log.Printf("[Ping Listener] Error: %v", err)
+			}
+
+		case <-ctx.Done():
+			fmt.Println("🔴 Follower_Watcher dihentikan")
+			return
+		}
+	}
+}

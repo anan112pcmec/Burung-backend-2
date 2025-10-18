@@ -28,7 +28,7 @@ func EntityMaintainLoop(ctx context.Context, db *gorm.DB, rds *redis.Client, SE 
 
 func MaintainSeller(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) error {
 	var sellersData []models.Seller
-	if err := db.Find(&sellersData).Error; err != nil {
+	if err := db.Order("follower_total DESC").Limit(100).Find(&sellersData).Error; err != nil {
 		return fmt.Errorf("gagal mengambil data seller dari DB: %w", err)
 	}
 
@@ -129,6 +129,7 @@ func MaintainSeller(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meil
 			"nama_seller":              d.Nama,
 			"jenis_seller":             d.Jenis,
 			"seller_dedication_seller": d.SellerDedication,
+			"follower_total_seller":    d.FollowerTotal,
 		})
 	}
 

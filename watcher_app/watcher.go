@@ -53,7 +53,13 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 		fmt.Println(err)
 	}
 
-	wg.Add(11)
+	if err := trigger.SetupFollowerTriggers(connection.DB); err != nil {
+		fmt.Println(" Gagal Membuat Follower Trigger")
+	} else {
+		fmt.Println(" Berhasil Membuat Follower Trigger")
+	}
+
+	wg.Add(12)
 	go func() {
 		defer wg.Done()
 		fmt.Println("Maintain Barang Jalan")
@@ -100,6 +106,10 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 	go func() {
 		defer wg.Done()
 		maintain_mb.NotificationMaintainLoop(ctx, connection.DB, connection.NOTIFICATION, Exchange)
+	}()
+	go func() {
+		defer wg.Done()
+		Follower_Watcher(ctx, dsn, connection.DB, connection.RDSENTITY)
 	}()
 
 }

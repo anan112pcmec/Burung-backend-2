@@ -9,7 +9,7 @@ type BarangContract interface {
 type BarangInduk struct {
 	ID               int32      `gorm:"primaryKey;autoIncrement" json:"id_barang_induk"`
 	SellerID         int32      `gorm:"column:id_seller;not null" json:"id_seller_barang_induk"`
-	seller           Seller     `gorm:"foreignKey:SellerID;references:ID"`
+	Seller           Seller     `gorm:"foreignKey:SellerID;references:ID" json:"-"`
 	NamaBarang       string     `gorm:"column:nama_barang;type:varchar(200);not null" json:"nama_barang_induk"`
 	JenisBarang      string     `gorm:"column:jenis_barang;type:seller_dedication;not null;default:'Semua Barang'" json:"jenis_barang_induk,omitempty"`
 	OriginalKategori string     `gorm:"column:original_kategori;type:varchar(250)" json:"original_kategori,omitempty"`
