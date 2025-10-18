@@ -102,11 +102,23 @@ func (e *Environment) RunConnectionEnvironment() (
 	barangIndukIndex := search_engine.Index("barang_induk_all")
 	sellerIndex := search_engine.Index("seller_all")
 
-	attrs := []interface{}{"jenis_barang_induk", "nama_barang_induk", "id_seller_barang_induk", "tanggal_rilis_barang_induk"}
+	attrs := []interface{}{"jenis_barang_induk", "nama_barang_induk", "id_seller_barang_induk", "tanggal_rilis_barang_induk", "viewed_barang_induk", "likes_barang_induk", "total_komentar_barang_induk"}
 	task2, err2 := barangIndukIndex.UpdateFilterableAttributes(&attrs)
 	if err2 != nil {
 		log.Fatal("❌ Gagal update filterable attributes:", err2)
 	}
+
+	sortables := []string{
+		"viewed_barang_induk",
+		"likes_barang_induk",
+		"total_komentar_barang_induk",
+		"tanggal_rilis_barang_induk",
+	}
+	task5, err5 := barangIndukIndex.UpdateSortableAttributes(&sortables)
+	if err5 != nil {
+		log.Fatal("❌ Gagal update sortable attributes:", err5)
+	}
+	log.Printf("✅ Sortable attributes barang_induk diperbarui (task %d)", task5.TaskUID)
 
 	fmt.Println(task2)
 
@@ -117,6 +129,14 @@ func (e *Environment) RunConnectionEnvironment() (
 	}
 
 	fmt.Println(task3)
+
+	attrs2 := []string{"follower_total", "created_at"}
+	task4, err4 := sellerIndex.UpdateSortableAttributes(&attrs2)
+	if err4 != nil {
+		log.Fatal("❌ Gagal update sortable attributes:", err4)
+	}
+
+	log.Printf("✅ Sortable attributes berhasil di-update! Task UID: %d\n", task4.TaskUID)
 
 	return
 }

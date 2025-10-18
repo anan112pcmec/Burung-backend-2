@@ -15,7 +15,6 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/helper"
-
 )
 
 // convertJenisBarang akan mengubah nama jenis internal jadi format DB
@@ -138,16 +137,17 @@ func CachingBarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, 
 	for _, b := range dataBarangInduk {
 		fmt.Println("barang", b.NamaBarang)
 		doc := map[string]interface{}{
-			"id":                         b.ID,
-			"id_barang_induk":            b.ID,
-			"nama_barang_induk":          b.NamaBarang,
-			"id_seller_barang_induk":     b.SellerID,
-			"original_kategori":          b.OriginalKategori,
-			"deskripsi":                  b.Deskripsi,
-			"jenis_barang_induk":         b.JenisBarang,
-			"tanggal_rilis_barang_induk": b.TanggalRilis,
-			"viewed_barang_induk":        b.Viewed,
-			"likes_barang_induk":         b.Likes,
+			"id":                          b.ID,
+			"id_barang_induk":             b.ID,
+			"nama_barang_induk":           b.NamaBarang,
+			"id_seller_barang_induk":      b.SellerID,
+			"original_kategori":           b.OriginalKategori,
+			"deskripsi":                   b.Deskripsi,
+			"jenis_barang_induk":          b.JenisBarang,
+			"tanggal_rilis_barang_induk":  b.TanggalRilis,
+			"viewed_barang_induk":         b.Viewed,
+			"likes_barang_induk":          b.Likes,
+			"total_komentar_barang_induk": b.TotalKomentar,
 		}
 		documents = append(documents, doc)
 	}

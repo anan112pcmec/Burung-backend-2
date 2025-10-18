@@ -20,23 +20,103 @@ func EntityMaintainLoop(ctx context.Context, db *gorm.DB, rds *redis.Client, SE 
 			fmt.Println("❌ BarangMaintainLoop dihentikan")
 			return
 		default:
-			MaintainSeller(ctx, db, rds, SE)
+			MaintainSeller(ctx, db, SE)
+			CachingSeller(ctx, db, rds)
 			time.Sleep(10 * time.Minute)
 		}
 	}
 }
 
-func MaintainSeller(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) error {
+func MaintainSeller(ctx context.Context, db *gorm.DB, SE meilisearch.ServiceManager) {
+	// Mengambil Data Seller
+	// Mengambil Seluruh data seller
+
 	var sellersData []models.Seller
-	if err := db.Order("follower_total DESC").Limit(100).Find(&sellersData).Error; err != nil {
+
+	_ = db.Model(&models.Seller{}).Find(&sellersData)
+
+	if len(sellersData) == 0 {
+		return
+	}
+
+	// Maintain Follower
+	var FollowerSellerFinal []models.Seller
+
+	for _, data := range sellersData {
+		var totalFol int64
+		if err := db.Model(&models.Follower{}).
+			Where(models.Follower{IdFollowed: int64(data.ID)}).
+			Count(&totalFol).Error; err != nil {
+			log.Printf("gagal hitung follower untuk seller %d: %v", data.ID, err)
+			continue
+		}
+
+		FollowerSellerFinal = append(FollowerSellerFinal, models.Seller{
+			ID:            data.ID,
+			FollowerTotal: int32(totalFol),
+		})
+	}
+
+	for _, seller := range FollowerSellerFinal {
+		if err := db.Model(&models.Seller{}).
+			Where(&models.Seller{ID: seller.ID}).
+			Update("follower_total", seller.FollowerTotal).Error; err != nil {
+			log.Printf("gagal update follower_total untuk seller %d: %v", seller.ID, err)
+		}
+	}
+
+	// Mengindex data seller yang di dapat ke search engine
+
+	var sellersIndex []models.Seller
+
+	// Mengambil Data Seller
+	// Mengambil Seluruh data seller yang telah di maintain
+
+	_ = db.Model(&models.Seller{}).Find(&sellersIndex)
+
+	if len(sellersData) == 0 {
+		return
+	}
+
+	SellerAll := SE.Index("seller_all")
+	var dataSellerIndex []map[string]interface{}
+
+	for _, d := range sellersIndex {
+		dataSellerIndex = append(dataSellerIndex, map[string]interface{}{
+			"id":                       d.ID,
+			"id_seller":                d.ID,
+			"nama_seller":              d.Nama,
+			"jenis_seller":             d.Jenis,
+			"seller_dedication_seller": d.SellerDedication,
+			"follower_total_seller":    d.FollowerTotal,
+		})
+	}
+
+	task, err := SellerAll.AddDocuments(dataSellerIndex, nil)
+	if err != nil {
+		log.Fatalf("Gagal Menambahkan data seller ke meilisearch")
+	} else {
+		log.Println("Berhasil Menambahkan data Seller ke meili search")
+		log.Println(task)
+	}
+
+}
+
+func CachingSeller(ctx context.Context, db *gorm.DB, rds *redis.Client) error {
+	var sellersData []models.Seller
+	// Mengambil Data Seller
+	// Hanya 100 seller dengan follower terbanyak yang akan di cache
+	if err := db.Model(&models.Seller{}).Order("follower_total DESC").Limit(100).Find(&sellersData).Error; err != nil {
 		return fmt.Errorf("gagal mengambil data seller dari DB: %w", err)
 	}
 
+	// return jika sellernya tidak ditemukan
 	if len(sellersData) == 0 {
 		fmt.Println("⚠️ Tidak ada data seller ditemukan")
 		return nil
 	}
 
+	// Melakukan caching seller
 	pipe := rds.Pipeline()
 	for _, s := range sellersData {
 		key := fmt.Sprintf("seller_data:%v", s.ID)
@@ -118,28 +198,6 @@ func MaintainSeller(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meil
 	}
 
 	fmt.Printf("✅ Sinkronisasi %d seller ke Redis selesai\n", len(sellersData))
-
-	SellerAll := SE.Index("seller_all")
-	var dataSellerIndex []map[string]interface{}
-
-	for _, d := range sellersData {
-		dataSellerIndex = append(dataSellerIndex, map[string]interface{}{
-			"id":                       d.ID,
-			"id_seller":                d.ID,
-			"nama_seller":              d.Nama,
-			"jenis_seller":             d.Jenis,
-			"seller_dedication_seller": d.SellerDedication,
-			"follower_total_seller":    d.FollowerTotal,
-		})
-	}
-
-	task, err := SellerAll.AddDocuments(dataSellerIndex, nil)
-	if err != nil {
-		log.Fatalf("Gagal Menambahkan data seller ke meilisearch")
-	} else {
-		log.Println("Berhasil Menambahkan data Seller ke meili search")
-		log.Println(task)
-	}
 
 	return nil
 }
