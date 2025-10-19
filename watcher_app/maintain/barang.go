@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -26,116 +25,252 @@ func BarangMaintainLoop(ctx context.Context, db *gorm.DB, rds *redis.Client, SE 
 			fmt.Println("❌ BarangMaintainLoop dihentikan")
 			return
 		default:
-			CachingBarangMaintain(ctx, db, rds, SE)
-			InternalBarangMaintain(ctx, db)
+			MaintainBarangInduk(ctx, db, rds, SE)
+			CachingBarangInduk(ctx, db, rds, SE)
+			KategoriBarangMaintain(ctx, db)
+			VarianBarangMaintain(ctx, db)
 			time.Sleep(10 * time.Minute)
 		}
 	}
 }
 
-type UpdateBarangInduk struct {
-	IdBarangInduk     int32
-	ViewedBarangInduk int32
-	LikesBarangInduk  int32
+type UpdateViewLikesBarangInduk struct {
+	IdBarangInduk     string
+	ViewedBarangInduk string
+	LikesBarangInduk  string
 }
 
-func CachingBarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) {
+func (u *UpdateViewLikesBarangInduk) Parse() (Id int, View int, Likes int, status bool) {
+	status = true
+	Id, err := strconv.Atoi(u.IdBarangInduk)
+	if err != nil {
+		status = false
+	}
 
-	var wg sync.WaitGroup
+	View, err_v := strconv.Atoi(u.ViewedBarangInduk)
+	if err_v != nil {
+		status = false
+	}
+
+	Likes, err_l := strconv.Atoi(u.LikesBarangInduk)
+	if err_l != nil {
+		status = false
+	}
+
+	return
+}
+
+type UpdateKomentarBarangInduk struct {
+	Id            int32
+	TotalKomentar int32
+}
+
+func MaintainBarangInduk(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) {
 	var mu sync.Mutex
+	var wg sync.WaitGroup
 
-	// Evaluasi Internal db Dari Cache
+	// Evaluasi Likes dan Viewed Barang Dari Cache Ke Internal DB
+	var KI_rds []UpdateViewLikesBarangInduk
+	key := "barang_keys"
 
-	keys, _ := rds.Keys(ctx, "barang:*").Result()
+	// Ambil semua key dari Redis
+	result, err := rds.SMembers(ctx, key).Result()
+	if err != nil {
+		fmt.Println("Gagal Mendapatkan Key Dari Redis:", err)
+		goto MaintainDB
+	}
 
-	if len(keys) != 0 {
-		updateBarangInduk := make([]UpdateBarangInduk, 0, len(keys))
+	if len(result) == 0 {
+		fmt.Println("Tidak ada key barang di Redis")
+		goto MaintainDB
+	}
 
-		for _, k := range keys {
-			wg.Add(1)
-			go func(k string) {
-				defer wg.Done()
+	// Loop untuk ambil data tiap key barang
+	for _, kb := range result {
+		wg.Add(1)
+		go func(key_barang string) {
+			defer wg.Done()
+			data, err_kb := rds.HGetAll(ctx, key_barang).Result()
+			if err_kb != nil || len(data) == 0 {
+				return
+			}
 
-				id := strings.TrimPrefix(k, "barang:")
+			if data["id"] == "" {
+				return
+			}
 
-				jumlah_viewed, err_viewed := rds.HGet(ctx, k, "viewed_barang_induk").Result()
-				if err_viewed != nil {
-					return
-				}
+			mu.Lock()
+			KI_rds = append(KI_rds, UpdateViewLikesBarangInduk{
+				IdBarangInduk:     data["id"],
+				ViewedBarangInduk: data["viewed_barang_induk"],
+				LikesBarangInduk:  data["likes_barang_induk"],
+			})
+			mu.Unlock()
+		}(kb)
+	}
 
-				jumlah_likes, err_likes := rds.HGet(ctx, k, "likes_barang_induk").Result()
-				if err_likes != nil {
-					return
-				}
+	wg.Wait()
 
-				id_barang_induk, err_id_barang_induk := strconv.Atoi(id)
-				if err_id_barang_induk != nil {
-					return
-				}
+	// Jika setelah wait ternyata tidak ada data, langsung loncat ke maintain DB
+	if len(KI_rds) == 0 {
+		goto MaintainDB
+	}
 
-				jumlah_viewed_barang, err_jumlah_viewed := strconv.Atoi(jumlah_viewed)
-				if err_jumlah_viewed != nil {
-					return
-				}
-
-				jumlah_likes_barang, err_jumlah_likes := strconv.Atoi(jumlah_likes)
-				if err_jumlah_likes != nil {
-					return
-				}
-
-				data := UpdateBarangInduk{
-					IdBarangInduk:     int32(id_barang_induk),
-					ViewedBarangInduk: int32(jumlah_viewed_barang),
-					LikesBarangInduk:  int32(jumlah_likes_barang),
-				}
-
-				mu.Lock()
-				updateBarangInduk = append(updateBarangInduk, data)
-				mu.Unlock()
-			}(k)
+	// Update data barang induk di database
+	for _, update_b := range KI_rds {
+		Id, View, Likes, status := update_b.Parse()
+		if !status {
+			continue
 		}
 
-		wg.Wait()
+		if err := db.Model(&models.BarangInduk{}).Where("id = ?", Id).Updates(&models.BarangInduk{
+			Viewed: int32(View),
+			Likes:  int32(Likes),
+		}).Error; err != nil {
+			fmt.Println("Gagal Update Barang Induk Id:", Id, "-", err)
+			continue
+		}
+	}
 
-		_ = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-			for _, update_data := range updateBarangInduk {
-				if err_update := tx.Model(&models.BarangInduk{}).Where(&models.BarangInduk{
-					ID: update_data.IdBarangInduk,
-				}).Updates(&models.BarangInduk{
-					Viewed: update_data.ViewedBarangInduk,
-					Likes:  update_data.LikesBarangInduk,
-				}).Error; err_update != nil {
-					return err_update
-				}
-			}
-			return nil
+	// Lanjut ke tahap maintain komentar
+	goto MaintainDB
+
+MaintainDB:
+	// Berfokus Memaintain Komentar
+	var KI_db []int64
+	var UpdateTotalKomen []UpdateKomentarBarangInduk
+
+	if err := db.Model(&models.BarangInduk{}).Pluck("id", &KI_db).Error; err != nil {
+		goto MaintainSE
+	}
+
+	if len(KI_db) == 0 {
+		goto MaintainSE
+	}
+
+	for _, Id := range KI_db {
+		var total int64 = 0
+		if err := db.Model(&models.Komentar{}).Where(&models.Komentar{IdBarangInduk: int32(Id)}).Count(&total).Error; err != nil {
+			continue
+		}
+
+		if total == 0 {
+			continue
+		}
+
+		UpdateTotalKomen = append(UpdateTotalKomen, UpdateKomentarBarangInduk{
+			Id:            int32(Id),
+			TotalKomentar: int32(total),
 		})
 	}
 
-	// Evaluasi Cache dari internal db
+	for _, updateKomen := range UpdateTotalKomen {
+		if err := db.Model(&models.BarangInduk{}).Where(&models.BarangInduk{ID: updateKomen.Id}).
+			Update("total_komentar", updateKomen.TotalKomentar).Error; err != nil {
+			fmt.Println("Gagal Update Komentar Barang Id:", updateKomen.Id, "-", err)
+			continue
+		}
+	}
 
-	idbar := []int32{}
-	if err := db.Model(&models.BarangInduk{}).Pluck("id", &idbar).Error; err != nil {
-		log.Println("❌ Gagal Mendapatkan Id Barang:", err)
+	goto MaintainSE
+
+MaintainSE:
+
+	dataBarangInduk := []models.BarangInduk{}
+
+	// Ambil 100 barang paling populer dari DB
+	if err := db.Model(&models.BarangInduk{}).
+		Order("viewed DESC, likes DESC").
+		Limit(100).
+		Find(&dataBarangInduk).Error; err != nil {
+		fmt.Println("❌ Gagal mengambil data Barang Induk:", err)
 		return
 	}
 
-	if len(idbar) == 0 {
-		log.Println("❌ Tidak ada Id Barang ditemukan")
+	if len(dataBarangInduk) == 0 {
+		fmt.Println("⚠️ Tidak ada data barang untuk diindeks ke Meilisearch")
 		return
+	}
+
+	// Pastikan index Meilisearch valid
+	barangIndukIndex := SE.Index("barang_induk_all")
+	if barangIndukIndex == nil {
+		fmt.Println("❌ Index Meilisearch 'barang_induk_all' tidak ditemukan")
+		return
+	}
+
+	// Siapkan dokumen untuk Meilisearch
+	documents := make([]map[string]interface{}, 0, len(dataBarangInduk))
+
+	for _, b := range dataBarangInduk {
+		fmt.Println(" Barang:", b.NamaBarang)
+
+		documents = append(documents, map[string]interface{}{
+			"id":                          b.ID,
+			"id_barang_induk":             b.ID,
+			"nama_barang_induk":           b.NamaBarang,
+			"id_seller_barang_induk":      b.SellerID,
+			"original_kategori":           b.OriginalKategori,
+			"deskripsi":                   b.Deskripsi,
+			"jenis_barang_induk":          b.JenisBarang,
+			"tanggal_rilis_barang_induk":  b.TanggalRilis,
+			"viewed_barang_induk":         b.Viewed,
+			"likes_barang_induk":          b.Likes,
+			"total_komentar_barang_induk": b.TotalKomentar,
+		})
+	}
+
+	task, err := barangIndukIndex.AddDocuments(documents, nil)
+	if err != nil {
+		fmt.Println("❌ Gagal menambahkan dokumen ke Meilisearch:", err)
+		return
+	}
+
+	log.Println("✅ Task UID terkirim ke Meilisearch:", task.TaskUID)
+
+}
+
+func CachingBarangInduk(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) {
+	fmt.Println("🚀 Memulai proses maintain cache barang...")
+
+	// ⚠️ Hati-hati, ini akan menghapus semua data Redis
+	if _, err := rds.FlushDB(ctx).Result(); err != nil {
+		fmt.Println("❌ Gagal melakukan flush Redis:", err)
+	} else {
+		fmt.Println("✅ Redis berhasil dibersihkan (FlushDB).")
+	}
+
+	key := "barang_keys"
+
+	// Bersihkan key lama
+	if result, err := rds.SMembers(ctx, key).Result(); err == nil {
+		for _, keys := range result {
+			if err := rds.Del(ctx, keys).Err(); err != nil {
+				log.Printf("⚠️ Gagal hapus key lama %s: %v", keys, err)
+			}
+		}
+		_ = rds.Del(ctx, key).Err()
 	}
 
 	dataBarangInduk := []models.BarangInduk{}
-	if err := db.Where("id IN ?", idbar).Find(&dataBarangInduk).Error; err != nil {
-		log.Println("❌ Gagal mengambil data barang:", err)
+
+	// Ambil 100 barang paling populer dari DB
+	if err := db.Model(&models.BarangInduk{}).
+		Order("viewed DESC, likes DESC").
+		Limit(100).
+		Find(&dataBarangInduk).Error; err != nil {
+		fmt.Println("❌ Gagal mengambil data Barang Induk:", err)
 		return
 	}
 
-	barangIndukIndex := SE.Index("barang_induk_all")
-	var documents []map[string]interface{}
+	if len(dataBarangInduk) == 0 {
+		fmt.Println("⚠️ Tidak ada data barang untuk di-cache.")
+		return
+	}
+
+	documents := make([]map[string]interface{}, 0, len(dataBarangInduk))
 
 	for _, b := range dataBarangInduk {
-		fmt.Println("barang", b.NamaBarang)
 		doc := map[string]interface{}{
 			"id":                          b.ID,
 			"id_barang_induk":             b.ID,
@@ -152,46 +287,26 @@ func CachingBarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, 
 		documents = append(documents, doc)
 	}
 
-	task, err := barangIndukIndex.AddDocuments(documents, nil)
-	if err != nil {
-		log.Fatal("❌ Gagal menambahkan dokumen ke Meilisearch:", err)
-	}
-
-	for i := range documents {
-		key := fmt.Sprintf("barang:%v", documents[i]["id"])
-
-		if err := rds.Del(ctx, key).Err(); err != nil {
-			log.Printf("⚠️ gagal hapus key lama %s: %v", key, err)
-		}
-
-		if err := rds.HSet(ctx, key, documents[i]).Err(); err != nil {
-			log.Printf("❌ gagal HSET key %s: %v", key, err)
+	// Simpan data barang ke Redis (hash per barang)
+	for _, data := range documents {
+		keyBarang := fmt.Sprintf("barang:%v", data["id"])
+		if err := rds.HSet(ctx, keyBarang, data).Err(); err != nil {
+			log.Printf("⚠️ Gagal menyimpan data ke Redis untuk %s: %v", keyBarang, err)
 		}
 	}
 
-	log.Println("✅ Task UID:", task.TaskUID)
+	fmt.Println("✅ Barang berhasil dimasukkan ke Redis")
 
-	fmt.Println("Barang Maintain Jalan")
-	if err_buat_key := rds.SAdd(ctx, "barang_keys", "_init_").Err(); err_buat_key != nil {
-		fmt.Println("Gagal Membuat keys semua barang")
-	} else {
-		var barang_induk []int32
-		if err := db.Model(&models.BarangInduk{}).Pluck("id", &barang_induk).Error; err != nil {
-			fmt.Println("Gagal Ambil id Semua Barang")
-		} else {
-			for _, data_id := range barang_induk {
-
-				redisKey := fmt.Sprintf("barang:%v", data_id)
-
-				if err := rds.SAdd(ctx, "barang_keys", redisKey).Err(); err != nil {
-					fmt.Printf("❌ Gagal masukin %s ke barang_keys: %v\n", redisKey, err)
-				} else {
-					fmt.Printf("✅ Berhasil masukin %s ke barang_keys\n", redisKey)
-				}
-			}
+	// Bangun ulang key utama barang_keys
+	for _, data := range documents {
+		keyBarang := fmt.Sprintf("barang:%v", data["id"])
+		if err := rds.SAdd(ctx, "barang_keys", keyBarang).Err(); err != nil {
+			fmt.Printf("❌ Gagal menambah %s ke barang_keys: %v\n", keyBarang, err)
 		}
 	}
+	fmt.Println("✅ Redis key 'barang_keys' berhasil diperbarui")
 
+	// Maintain per seller
 	var idSeller []int32
 	if err := db.Model(&models.Seller{}).Pluck("id", &idSeller).Error; err != nil {
 		fmt.Println("❌ Gagal mendapatkan ID seluruh seller:", err)
@@ -199,32 +314,29 @@ func CachingBarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, 
 	}
 
 	for _, id := range idSeller {
-		key := fmt.Sprintf("barang_seller:%v", id)
+		keySeller := fmt.Sprintf("barang_seller:%v", id)
 
-		if err := rds.Del(ctx, key).Err(); err != nil {
-			fmt.Printf("⚠️ Gagal hapus Redis key %s: %v\n", key, err)
-		}
-
-		if err := rds.SAdd(ctx, key, "_init").Err(); err != nil {
-			fmt.Printf("❌ Gagal buat set Redis untuk seller %v: %v\n", id, err)
-		} else {
-			fmt.Printf("✅ Redis set siap untuk seller %v\n", id)
-		}
+		_ = rds.Del(ctx, keySeller).Err()
+		_ = rds.SAdd(ctx, keySeller, "_init").Err()
 
 		var idBarangInduk []int32
 		if err := db.Model(&models.BarangInduk{}).
 			Where(&models.BarangInduk{SellerID: id}).
 			Pluck("id", &idBarangInduk).Error; err != nil {
-			fmt.Println("❌ Gagal mendapatkan barang induk:", err)
+			fmt.Println("❌ Gagal mendapatkan barang induk untuk seller:", id)
+			continue
 		}
 
 		for _, barangID := range idBarangInduk {
-			if err := rds.SAdd(ctx, key, fmt.Sprintf("barang:%v", barangID)).Err(); err != nil {
-				fmt.Printf("⚠️ Gagal tambah barang %v ke Redis untuk seller %v: %v\n", barangID, id, err)
+			if err := rds.SAdd(ctx, keySeller, fmt.Sprintf("barang:%v", barangID)).Err(); err != nil {
+				fmt.Printf("⚠️ Gagal menambahkan barang %v ke Redis seller %v: %v\n", barangID, id, err)
 			}
 		}
 	}
 
+	fmt.Println("✅ Redis seller-barang mapping selesai")
+
+	// Maintain jenis barang secara paralel
 	jenisBarang := [...]string{
 		"Pakaian&Fashion", "Kosmetik&Kecantikan", "Elektronik&Gadget",
 		"Buku&Media", "Makanan&Minuman", "Ibu&Bayi", "Mainan",
@@ -234,37 +346,39 @@ func CachingBarangMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client, 
 		"SemuaBarang",
 	}
 
+	var wg sync.WaitGroup
 	for _, jenis := range jenisBarang {
+		wg.Add(1)
 		go func(j string) {
-			key := fmt.Sprintf("jenis_%s_barang", j)
+			defer wg.Done()
 
-			if err := rds.Del(ctx, key).Err(); err != nil {
-				fmt.Printf("⚠️ Gagal hapus Redis key %s: %v\n", key, err)
-			}
-
-			if err := rds.SAdd(ctx, key, "_init", 1).Err(); err != nil {
-				fmt.Printf("❌ Gagal buat hash Redis untuk jenis %s: %v\n", j, err)
-			} else {
-				fmt.Printf("✅ Hash Redis siap untuk jenis %s\n", j)
-			}
+			keyJenis := fmt.Sprintf("jenis_%s_barang", j)
+			_ = rds.Del(ctx, keyJenis).Err()
+			_ = rds.SAdd(ctx, keyJenis, "_init").Err()
 
 			var idBarangInduk []int32
 			if err := db.Model(&models.BarangInduk{}).
 				Where(&models.BarangInduk{JenisBarang: helper.ConvertJenisBarang(j)}).
 				Pluck("id", &idBarangInduk).Error; err != nil {
-				fmt.Println("❌ Gagal mendapatkan barang induk:", err)
+				fmt.Println("❌ Gagal mendapatkan barang induk untuk jenis:", j)
+				return
 			}
 
 			for _, barangID := range idBarangInduk {
-				if err := rds.SAdd(ctx, key, fmt.Sprintf("barang:%v", barangID)).Err(); err != nil {
-					fmt.Printf("⚠️ Gagal tambah barang %v ke Redis untuk seller %v: %v\n", barangID, barangID, err)
+				if err := rds.SAdd(ctx, keyJenis, fmt.Sprintf("barang:%v", barangID)).Err(); err != nil {
+					fmt.Printf("⚠️ Gagal menambahkan barang %v ke Redis untuk jenis %s: %v\n", barangID, j, err)
 				}
 			}
+			fmt.Printf("✅ Redis siap untuk jenis %s\n", j)
 		}(jenis)
 	}
+
+	wg.Wait()
+
+	fmt.Println("🎯 Caching barang selesai sepenuhnya.")
 }
 
-func InternalBarangMaintain(ctx context.Context, db *gorm.DB) {
+func KategoriBarangMaintain(ctx context.Context, db *gorm.DB) {
 
 	// EVALUATING STOK KATEGORI
 
@@ -305,7 +419,9 @@ func InternalBarangMaintain(ctx context.Context, db *gorm.DB) {
 				"stok": jumlah_real})
 		}
 	}
+}
 
+func VarianBarangMaintain(ctx context.Context, db *gorm.DB) {
 	// EVALUATING STATUS VARIAN BARANG
 
 	var varian_barang []models.VarianBarang
