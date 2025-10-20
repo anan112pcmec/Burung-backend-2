@@ -14,6 +14,7 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/helper"
+
 )
 
 // convertJenisBarang akan mengubah nama jenis internal jadi format DB
@@ -63,6 +64,11 @@ func (u *UpdateViewLikesBarangInduk) Parse() (Id int, View int, Likes int, statu
 type UpdateKomentarBarangInduk struct {
 	Id            int32
 	TotalKomentar int32
+}
+
+type UpdateHargaBarangInduk struct {
+	Id            int32
+	HargaKategori int32
 }
 
 func MaintainBarangInduk(ctx context.Context, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) {
@@ -136,9 +142,10 @@ func MaintainBarangInduk(ctx context.Context, db *gorm.DB, rds *redis.Client, SE
 	goto MaintainDB
 
 MaintainDB:
-	// Berfokus Memaintain Komentar
+	// Berfokus Memaintain Komentar dan Harga Kategori
 	var KI_db []int64
 	var UpdateTotalKomen []UpdateKomentarBarangInduk
+	var UpdateHarga []UpdateHargaBarangInduk
 
 	if err := db.Model(&models.BarangInduk{}).Pluck("id", &KI_db).Error; err != nil {
 		goto MaintainSE
@@ -168,6 +175,38 @@ MaintainDB:
 		if err := db.Model(&models.BarangInduk{}).Where(&models.BarangInduk{ID: updateKomen.Id}).
 			Update("total_komentar", updateKomen.TotalKomentar).Error; err != nil {
 			fmt.Println("Gagal Update Komentar Barang Id:", updateKomen.Id, "-", err)
+			continue
+		}
+	}
+
+	// Maintain Harga
+
+	for _, Id := range KI_db {
+		var origin string = ""
+		var harga int64 = 0
+		if err := db.Model(&models.Komentar{}).Select("original_kategori").Where(&models.Komentar{IdBarangInduk: int32(Id)}).Take(&origin).Error; err != nil {
+			continue
+		}
+
+		if harga == 0 || origin == "" {
+			continue
+		}
+
+		if err := db.Model(&models.KategoriBarang{}).Select("harga").Where(&models.KategoriBarang{
+			IdBarangInduk: int32(Id), Nama: origin,
+		}).Take(&harga).Error; err != nil {
+			continue
+		}
+
+		UpdateHarga = append(UpdateHarga, UpdateHargaBarangInduk{
+			Id:            int32(Id),
+			HargaKategori: int32(harga),
+		})
+	}
+
+	for _, updateHarga := range UpdateHarga {
+		if err := db.Model(&models.BarangInduk{}).Where(&models.BarangInduk{ID: updateHarga.Id}).
+			Update("harga_kategoris", updateHarga.HargaKategori).Error; err != nil {
 			continue
 		}
 	}
@@ -283,6 +322,7 @@ func CachingBarangInduk(ctx context.Context, db *gorm.DB, rds *redis.Client, SE 
 			"viewed_barang_induk":         b.Viewed,
 			"likes_barang_induk":          b.Likes,
 			"total_komentar_barang_induk": b.TotalKomentar,
+			"harga":                       b.HargaKategoris,
 		}
 		documents = append(documents, doc)
 	}

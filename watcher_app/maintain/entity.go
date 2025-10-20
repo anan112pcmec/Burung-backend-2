@@ -103,6 +103,13 @@ func MaintainSeller(ctx context.Context, db *gorm.DB, SE meilisearch.ServiceMana
 }
 
 func CachingSeller(ctx context.Context, db *gorm.DB, rds *redis.Client) error {
+
+	if _, err := rds.FlushDB(ctx).Result(); err != nil {
+		fmt.Println("❌ Gagal melakukan flush Redis:", err)
+	} else {
+		fmt.Println("✅ Redis berhasil dibersihkan (FlushDB).")
+	}
+
 	var sellersData []models.Seller
 	// Mengambil Data Seller
 	// Hanya 100 seller dengan follower terbanyak yang akan di cache

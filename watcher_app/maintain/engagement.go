@@ -27,6 +27,12 @@ func EngagementMaintainLoop(ctx context.Context, db *gorm.DB, rds *redis.Client)
 }
 
 func PendingTransaksiMaintain(ctx context.Context, db *gorm.DB, rds *redis.Client) {
+	if _, err := rds.FlushDB(ctx).Result(); err != nil {
+		fmt.Println("❌ Gagal melakukan flush Redis:", err)
+	} else {
+		fmt.Println("✅ Redis berhasil dibersihkan (FlushDB).")
+	}
+
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var hapusTransaksiPending []string
