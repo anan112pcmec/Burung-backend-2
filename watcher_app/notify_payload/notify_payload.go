@@ -7,6 +7,24 @@ type TableAndAction struct {
 	Action string `json:"action"`
 }
 
+// ////////////////////////////////////////////////////////////////////////////
+// ENTITY PAYLOAD
+// ////////////////////////////////////////////////////////////////////////////
+
+type NotifyResponsesPayloadPengguna struct {
+	TableAndAction
+	models.Pengguna
+	ChangedColumns    ChangedColumns `json:"changed_columns_pengguna"`
+	ColumnChangeNames []string       `json:"column_change_name"`
+}
+
+type NotifyResponsePayloadSeller struct {
+	TableAndAction
+	models.Seller
+	ChangedColumns    ChangedColumns `json:"changed_columns_seller"`
+	ColumnChangeNames []string       `json:"column_change_name"`
+}
+
 type SellerNotifyPayload struct {
 	TableAndAction
 	Id               int32  `json:"id_seller"`
@@ -50,22 +68,6 @@ func (k *KurirNotifyPayload) Validate() (Message string, Action string) {
 
 type ChangedColumns struct {
 	Status string `json:"status"`
-}
-
-// ////////////////////////////////////////////////////////////////////////////
-// ENTITY PAYLOAD
-// ////////////////////////////////////////////////////////////////////////////
-
-type NotifyResponsesPayloadPengguna struct {
-	TableAndAction
-	models.Pengguna
-	ChangedColumns ChangedColumns `json:"changed_columns_pengguna"`
-}
-
-type NotifyResponsePayloadSeller struct {
-	TableAndAction
-	models.Seller
-	ChangedColumns ChangedColumns `json:"changed_columns_seller"`
 }
 
 // ////////////////////////////////////////////////////////////////////////////

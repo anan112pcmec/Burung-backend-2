@@ -5,13 +5,6 @@ import (
 	"time"
 )
 
-type Status string
-
-const (
-	StatusOnline  Status = "Online"
-	StatusOffline Status = "Offline"
-)
-
 type Pengguna struct {
 	ID             int64      `gorm:"primaryKey;autoIncrement" json:"id_user"`
 	Username       string     `gorm:"column:username;type:varchar(100);not null;default:''" json:"username_user"`
@@ -19,7 +12,7 @@ type Pengguna struct {
 	Email          string     `gorm:"column:email;type:varchar(100);not null;uniqueIndex" json:"email_user"`
 	PasswordHash   string     `gorm:"column:password_hash;type:varchar(250);not null;default:''" json:"pass_user"`
 	PinHash        string     `gorm:"column:pin_hash;type:varchar(250);not null;default:''" json:"pin_user"`
-	StatusPengguna Status     `gorm:"column:status;type:status;not null;default:'Offline'" json:"status_user"`
+	StatusPengguna string     `gorm:"column:status;type:status;not null;default:'Offline'" json:"status_user"`
 	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
@@ -29,26 +22,7 @@ func (Pengguna) TableName() string {
 	return "pengguna"
 }
 
-func (p *Pengguna) RoutingKey() string {
-	RoutingKey := fmt.Sprintf("kurir.%v", p.ID)
-
-	return RoutingKey
-}
-
-func (p *Pengguna) QRGenerate() (NamaQueue string, RoutingKey string) {
-	NamaQueue = fmt.Sprintf("notification_user_%v_%s", p.ID, p.Username)
-	RoutingKey = fmt.Sprintf("user.%v", p.ID)
-
-	return
-}
-
 type JenisSeller string
-
-const (
-	Brands      JenisSeller = "Brands"
-	Distributor JenisSeller = "Distributors"
-	Personal    JenisSeller = "Personal"
-)
 
 type SellerType string
 
@@ -106,21 +80,8 @@ func (s *Seller) Validating() error {
 	return nil
 }
 
-func (s *Seller) RoutingKey() string {
-	RoutingKey := fmt.Sprintf("kurir.%v", s.ID)
-
-	return RoutingKey
-}
-
 func (Seller) TableName() string {
 	return "seller"
-}
-
-func (s *Seller) QRGenerate() (NamaQueue string, RoutingKey string) {
-	NamaQueue = fmt.Sprintf("notification_seller_%v_%s", s.ID, s.Username)
-	RoutingKey = fmt.Sprintf("seller.%v", s.ID)
-
-	return
 }
 
 type JenisLayananKurir string
@@ -148,17 +109,4 @@ type Kurir struct {
 
 func (Kurir) TableName() string {
 	return "kurir"
-}
-
-func (k *Kurir) RoutingKey() string {
-	RoutingKey := fmt.Sprintf("kurir.%v", k.ID)
-
-	return RoutingKey
-}
-
-func (k *Kurir) QRGenerate() (NamaQueue string, RoutingKey string) {
-	NamaQueue = fmt.Sprintf("notification_kurir_%v_%s", k.ID, k.Username)
-	RoutingKey = fmt.Sprintf("kurir.%v", k.ID)
-
-	return
 }

@@ -18,7 +18,16 @@ import (
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/services"
 )
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Pengguna Watcher
+// Melihat dan mengawasi seluruh perubahan di dalam table pengguna
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func Pengguna_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity_cache *redis.Client, conn *amqp091.Connection) {
+	// Objektif
+	// 1.Watcher Pengguna memberikan notifikasi jika ada field sensitif yang berubah
+	// (username, email, password, pin)
+
 	fmt.Println("🟢 Mulai mengawasi pengguna_channel")
 
 	minReconn := 10 * time.Second
@@ -49,15 +58,8 @@ func Pengguna_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity
 
 				}
 
-				if data.Action == "INSERT" {
-					go services.UpUser(ctx, data, conn)
-				}
 				if data.Action == "UPDATE" {
-					if data.ChangedColumns.Status == "Online" {
-						go services.OnlinePengguna(ctx, db_query, data, entity_cache, conn)
-					} else if data.ChangedColumns.Status == "Offline" {
-						go services.OfflinePengguna(ctx, db_query, data, entity_cache)
-					}
+
 				}
 			}
 
