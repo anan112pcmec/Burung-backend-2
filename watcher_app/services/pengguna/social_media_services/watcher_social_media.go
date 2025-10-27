@@ -1,4 +1,4 @@
-package services
+package pengguna_social_media_watcher
 
 import (
 	"context"

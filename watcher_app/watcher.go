@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/anan112pcmec/Burung-backend-2/watcher_app/dispatcher"
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/maintain"
 	maintain_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/maintain"
 	producer_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/producer"
@@ -77,31 +78,31 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 	}()
 	go func() {
 		defer wg.Done()
-		Pengguna_Watcher(ctx, dsn, connection.DB, connection.RDSENTITY, connection.NOTIFICATION)
+		dispatcher.Pengguna_Watcher(ctx, dsn, connection.DB, connection.RDSENTITY, connection.NOTIFICATION)
 	}()
 	go func() {
 		defer wg.Done()
-		Seller_Watcher(ctx, dsn, connection.DB, connection.RDSENTITY, connection.NOTIFICATION)
+		dispatcher.Seller_Watcher(ctx, dsn, connection.DB, connection.RDSENTITY, connection.NOTIFICATION)
 	}()
 	go func() {
 		defer wg.Done()
-		Barang_Induk_Watcher(ctx, dsn, connection.DB, connection.RDSBARANG, connection.SE)
+		dispatcher.Barang_Induk_Watcher(ctx, dsn, connection.DB, connection.RDSBARANG, connection.SE)
 	}()
 	go func() {
 		defer wg.Done()
-		Varian_Barang_Watcher(ctx, dsn, connection.DB)
+		dispatcher.Varian_Barang_Watcher(ctx, dsn, connection.DB)
 	}()
 	go func() {
 		defer wg.Done()
-		Transaksi_Watcher(ctx, dsn, connection.DB, connection.NOTIFICATION)
+		dispatcher.Transaksi_Watcher(ctx, dsn, connection.DB, connection.NOTIFICATION)
 	}()
 	go func() {
 		defer wg.Done()
-		Informasi_Kurir_Watcher(ctx, dsn, connection.DB)
+		dispatcher.Informasi_Kurir_Watcher(ctx, dsn, connection.DB)
 	}()
 	go func() {
 		defer wg.Done()
-		Informasi_Pengiriman_Watcher(ctx, dsn, connection.DB)
+		dispatcher.Informasi_Pengiriman_Watcher(ctx, dsn, connection.DB)
 	}()
 	go func() {
 		defer wg.Done()
@@ -109,7 +110,7 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 	}()
 	go func() {
 		defer wg.Done()
-		Follower_Watcher(ctx, dsn, connection.DB, connection.RDSENTITY)
+		dispatcher.Follower_Watcher(ctx, dsn, connection.DB, connection.RDSENTITY)
 	}()
 
 }

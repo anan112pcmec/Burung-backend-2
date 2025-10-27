@@ -1,4 +1,4 @@
-package services
+package seller_barang_watcher
 
 import (
 	"context"
@@ -115,9 +115,3 @@ func HapusBarang(ctx context.Context, db *gorm.DB, data notify_payload.NotifyRes
 		fmt.Println("✅ User offline, key dihapus:", key)
 	}
 }
-
-// //////////////////////////////////////////////////////////////////////////////////////////////
-// VARIAN BARANG
-// //////////////////////////////////////////////////////////////////////////////////////////////
-
-// 1. Lebih Bertujuan Untuk Mengendalikan Barang Apalagi Jika Berkenaan dengan Transaksi

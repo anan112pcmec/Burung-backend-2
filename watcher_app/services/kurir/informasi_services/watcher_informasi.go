@@ -1,4 +1,4 @@
-package services
+package kurir_informasi_watcher
 
 import (
 	"context"

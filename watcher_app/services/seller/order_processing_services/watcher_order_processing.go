@@ -1,4 +1,4 @@
-package services
+package seller_order_processing_watcher
 
 import (
 	"fmt"
@@ -196,4 +196,26 @@ func UnapproveTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *g
 		}
 	}
 	fmt.Printf("[INFO] [END] UnapproveTransaksiChange | TransaksiID=%d\n", data.ID)
+}
+
+func WaitingConfirmation(IdTransaksi, IdKurir int64, status string, db *gorm.DB) {
+	if status != "Packaging" {
+		return
+	}
+
+	if IdTransaksi == 0 {
+		return
+	}
+
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		if err_update_transaksi := tx.Model(&models.Transaksi{}).Where(&models.Transaksi{
+			ID: IdTransaksi,
+		}).Update("status", "Waiting").Error; err_update_transaksi != nil {
+			return err_update_transaksi
+		}
+
+		return nil
+	}); err != nil {
+		return
+	}
 }
