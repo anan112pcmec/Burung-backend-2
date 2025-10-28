@@ -21,6 +21,12 @@ type NotifyResponsesPayloadBarang struct {
 	ChangedColumns ChangedColumns `json:"changed_columns"`
 }
 
+type NotifyResponsesPayloadKategoriBarang struct {
+	TableAndAction
+	models.KategoriBarang
+	ChangedColumns ChangedColumns `json:"changed_columns"`
+}
+
 type NotifyResponsePayloadVarianBarang struct {
 	TableAndAction
 	OldData models.VarianBarang `json:"old_data"`

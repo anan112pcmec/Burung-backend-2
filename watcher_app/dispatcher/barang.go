@@ -56,12 +56,58 @@ func Barang_Induk_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB, bar
 				continue
 			}
 
-			if data.Action == "INSERT" {
-				go seller_barang_watcher.BarangMasuk(ctx, dbQuery, data, barangCache, SE)
+			if data.Action == "UPDATE" {
+
+			}
+		case <-ticker.C:
+			if err := listener.Ping(); err != nil {
+				log.Printf("[Ping Listener] error: %v", err)
 			}
 
-			if data.Action == "DELETE" {
-				go seller_barang_watcher.HapusBarang(ctx, dbQuery, data, barangCache)
+		case <-ctx.Done():
+			fmt.Println("🔴 Barang_Watcher dihentikan")
+			return
+		}
+	}
+}
+
+func Kategori_Barang_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) {
+	fmt.Println("Mengawasi Perubahan Seluruh Data Varian Barang, Kategori, dan Varian Barang")
+
+	minReconn := 10 * time.Second
+	maxReconn := time.Minute
+
+	// Listener ke Postgres
+	listener := pq.NewListener(dsn, minReconn, maxReconn, func(ev pq.ListenerEventType, err error) {
+		if err != nil {
+			log.Printf("[Listener Error] %v", err)
+		}
+	})
+
+	if err := listener.Listen("kategori_barang_channel"); err != nil {
+		log.Fatalf("Gagal listen varian barang channel: %v", err)
+	}
+
+	ticker := time.NewTicker(90 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case n := <-listener.Notify:
+			if n == nil {
+				continue
+			}
+
+			fmt.Printf("🔔 Dapat notify Barang: %s\n", n.Extra)
+
+			var data notify_payload.NotifyResponsesPayloadKategoriBarang
+			if err := json.Unmarshal([]byte(n.Extra), &data); err != nil {
+				fmt.Println("Gagal Parse JSON:", err)
+				continue
+			}
+
+			if data.Action == "UPDATE" {
+				go seller_barang_watcher.BarangReady(ctx, dbQuery, data)
 			}
 
 		case <-ticker.C:
@@ -70,7 +116,7 @@ func Barang_Induk_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB, bar
 			}
 
 		case <-ctx.Done():
-			fmt.Println("🔴 Barang_Watcher dihentikan")
+			fmt.Println("🔴 Varian_Barang_Watcher dihentikan")
 			return
 		}
 	}

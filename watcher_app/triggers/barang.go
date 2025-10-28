@@ -4,20 +4,26 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
-
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Fungsi Setup Barang Triggers
-// Fungsi Ini melakukan setup trigger dan channel guna nanti akan di watch oleh watcher
+// Fungsi ini melakukan setup trigger dan channel agar dapat di-watch oleh watcher service
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func SetupBarangTriggers(db *gorm.DB) error {
+	// Pastikan semua trigger & function lama dihapus
 	drops := []string{
-		`DROP TRIGGER IF EXISTS barang_induk_trigger ON barang_induk;
-		 DROP FUNCTION IF EXISTS notify_barang_induk_change();
-		 DROP TRIGGER IF EXIST varian_barang_trigger ON varian_barang;
-		 DROP FUNCTION IF EXIST notify_varian_barang_change();`,
+		`
+		DROP TRIGGER IF EXISTS barang_induk_trigger ON barang_induk;
+		DROP FUNCTION IF EXISTS notify_barang_induk_change();
+
+		DROP TRIGGER IF EXISTS kategori_barang_trigger ON kategori_barang;
+		DROP FUNCTION IF EXISTS notify_kategori_barang_change();
+
+		DROP TRIGGER IF EXISTS varian_barang_status_notify_update ON varian_barang;
+		DROP FUNCTION IF EXISTS notify_varian_barang_status_change();
+		`,
 	}
 
 	for _, drop := range drops {
@@ -26,9 +32,12 @@ func SetupBarangTriggers(db *gorm.DB) error {
 		}
 	}
 
-	triggerbarang := [...]string{
+	triggers := []string{
 		`
+		-- /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		-- Trigger untuk barang_induk
+		-- /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 		CREATE OR REPLACE FUNCTION notify_barang_induk_change()
 		RETURNS trigger AS $$
 		DECLARE
@@ -121,7 +130,115 @@ func SetupBarangTriggers(db *gorm.DB) error {
 		FOR EACH ROW
 		EXECUTE FUNCTION notify_barang_induk_change();
 
-		-- Trigger untuk varian_barang hanya saat status berubah
+
+		-- /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		-- Trigger untuk kategori_barang
+		-- /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+		CREATE OR REPLACE FUNCTION notify_kategori_barang_change()
+		RETURNS trigger AS $$
+		DECLARE
+			payload JSON;
+			changed_columns JSONB := '{}'::jsonb;
+		BEGIN
+			IF TG_OP = 'UPDATE' THEN
+				IF OLD.id_barang_induk IS DISTINCT FROM NEW.id_barang_induk THEN
+					changed_columns := jsonb_set(changed_columns, '{id_barang_induk}', to_jsonb(NEW.id_barang_induk));
+				END IF;
+				IF OLD.id_alamat_gudang IS DISTINCT FROM NEW.id_alamat_gudang THEN
+					changed_columns := jsonb_set(changed_columns, '{id_alamat_gudang}', to_jsonb(NEW.id_alamat_gudang));
+				END IF;
+				IF OLD.id_rekening IS DISTINCT FROM NEW.id_rekening THEN
+					changed_columns := jsonb_set(changed_columns, '{id_rekening}', to_jsonb(NEW.id_rekening));
+				END IF;
+				IF OLD.nama IS DISTINCT FROM NEW.nama THEN
+					changed_columns := jsonb_set(changed_columns, '{nama}', to_jsonb(NEW.nama));
+				END IF;
+				IF OLD.deskripsi IS DISTINCT FROM NEW.deskripsi THEN
+					changed_columns := jsonb_set(changed_columns, '{deskripsi}', to_jsonb(NEW.deskripsi));
+				END IF;
+				IF OLD.warna IS DISTINCT FROM NEW.warna THEN
+					changed_columns := jsonb_set(changed_columns, '{warna}', to_jsonb(NEW.warna));
+				END IF;
+				IF OLD.stok IS DISTINCT FROM NEW.stok THEN
+					changed_columns := jsonb_set(changed_columns, '{stok}', to_jsonb(NEW.stok));
+				END IF;
+				IF OLD.harga IS DISTINCT FROM NEW.harga THEN
+					changed_columns := jsonb_set(changed_columns, '{harga}', to_jsonb(NEW.harga));
+				END IF;
+				IF OLD.berat_gram IS DISTINCT FROM NEW.berat_gram THEN
+					changed_columns := jsonb_set(changed_columns, '{berat_gram}', to_jsonb(NEW.berat_gram));
+				END IF;
+				IF OLD.dimensi_panjang_cm IS DISTINCT FROM NEW.dimensi_panjang_cm THEN
+					changed_columns := jsonb_set(changed_columns, '{dimensi_panjang_cm}', to_jsonb(NEW.dimensi_panjang_cm));
+				END IF;
+				IF OLD.dimensi_lebar_cm IS DISTINCT FROM NEW.dimensi_lebar_cm THEN
+					changed_columns := jsonb_set(changed_columns, '{dimensi_lebar_cm}', to_jsonb(NEW.dimensi_lebar_cm));
+				END IF;
+				IF OLD.sku IS DISTINCT FROM NEW.sku THEN
+					changed_columns := jsonb_set(changed_columns, '{sku}', to_jsonb(NEW.sku));
+				END IF;
+			END IF;
+
+			IF TG_OP = 'INSERT' THEN
+				payload := json_build_object(
+					'table', TG_TABLE_NAME,
+					'action', TG_OP,
+					'id_kategori_barang', NEW.id,
+					'id_barang_induk_kategori', NEW.id_barang_induk,
+					'id_alamat_gudang_kategori_barang', NEW.id_alamat_gudang,
+					'id_rekening_kategori_barang', NEW.id_rekening,
+					'nama_kategori_barang', NEW.nama,
+					'deskripsi_kategori_barang', NEW.deskripsi,
+					'warna_kategori_barang', NEW.warna,
+					'stok_kategori_barang', NEW.stok,
+					'harga_kategori_barang', NEW.harga,
+					'berat_gram_kategori_barang', NEW.berat_gram,
+					'dimensi_panjang_cm_kategori_barang', NEW.dimensi_panjang_cm,
+					'dimensi_lebar_cm_kategori_barang', NEW.dimensi_lebar_cm,
+					'sku_kategori', NEW.sku,
+					'created_at', NEW.created_at,
+					'updated_at', NEW.updated_at,
+					'deleted_at', NEW.deleted_at
+				);
+			ELSIF TG_OP = 'UPDATE' THEN
+				payload := json_build_object(
+					'table', TG_TABLE_NAME,
+					'action', TG_OP,
+					'id_kategori_barang', NEW.id,
+					'changed_columns', changed_columns,
+					'nama_kategori_barang', NEW.nama,
+					'harga_kategori_barang', NEW.harga,
+					'stok_kategori_barang', NEW.stok,
+					'updated_at', NEW.updated_at
+				);
+			ELSIF TG_OP = 'DELETE' THEN
+				payload := json_build_object(
+					'table', TG_TABLE_NAME,
+					'action', TG_OP,
+					'id_kategori_barang', OLD.id,
+					'nama_kategori_barang', OLD.nama,
+					'harga_kategori_barang', OLD.harga,
+					'stok_kategori_barang', OLD.stok,
+					'deleted_at', OLD.deleted_at
+				);
+			END IF;
+
+			PERFORM pg_notify('kategori_barang_channel', payload::text);
+			RETURN NEW;
+		END;
+		$$ LANGUAGE plpgsql;
+
+		CREATE TRIGGER kategori_barang_trigger
+		AFTER INSERT OR UPDATE OR DELETE ON kategori_barang
+		FOR EACH ROW
+		EXECUTE FUNCTION notify_kategori_barang_change();
+
+
+		-- /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		-- Trigger untuk varian_barang (khusus perubahan status)
+		-- /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 		CREATE OR REPLACE FUNCTION notify_varian_barang_status_change()
 		RETURNS trigger AS $$
 		DECLARE
@@ -141,22 +258,19 @@ func SetupBarangTriggers(db *gorm.DB) error {
 		END;
 		$$ LANGUAGE plpgsql;
 
-		DROP TRIGGER IF EXISTS varian_barang_status_notify_update ON varian_barang;
-
 		CREATE TRIGGER varian_barang_status_notify_update
 		AFTER UPDATE ON varian_barang
 		FOR EACH ROW
 		EXECUTE FUNCTION notify_varian_barang_status_change();
-
-	`,
+		`,
 	}
 
-	for _, trig := range triggerbarang {
+	for _, trig := range triggers {
 		if err := db.Exec(trig).Error; err != nil {
 			return fmt.Errorf("gagal buat trigger/function: %w", err)
 		}
 	}
 
-	fmt.Println("Semua trigger berhasil dibuat ulang!")
+	fmt.Println("✅ Semua trigger dan function berhasil dibuat ulang!")
 	return nil
 }

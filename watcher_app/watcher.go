@@ -60,7 +60,7 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 		fmt.Println(" Berhasil Membuat Follower Trigger")
 	}
 
-	wg.Add(12)
+	wg.Add(13)
 	go func() {
 		defer wg.Done()
 		fmt.Println("Maintain Barang Jalan")
@@ -87,6 +87,9 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 	go func() {
 		defer wg.Done()
 		dispatcher.Barang_Induk_Watcher(ctx, dsn, connection.DB, connection.RDSBARANG, connection.SE)
+	}()
+	go func() {
+		dispatcher.Kategori_Barang_Watcher(ctx, dsn, connection.DB)
 	}()
 	go func() {
 		defer wg.Done()
