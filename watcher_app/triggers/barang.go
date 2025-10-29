@@ -7,38 +7,18 @@ import (
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Fungsi Setup Barang Triggers
-// Fungsi ini melakukan setup trigger dan channel agar dapat di-watch oleh watcher service
+// Dropper Dan Trigger untuk barang_induk
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func SetupBarangTriggers(db *gorm.DB) error {
-	// Pastikan semua trigger & function lama dihapus
-	drops := []string{
-		`
-		DROP TRIGGER IF EXISTS barang_induk_trigger ON barang_induk;
-		DROP FUNCTION IF EXISTS notify_barang_induk_change();
-
-		DROP TRIGGER IF EXISTS kategori_barang_trigger ON kategori_barang;
-		DROP FUNCTION IF EXISTS notify_kategori_barang_change();
-
-		DROP TRIGGER IF EXISTS varian_barang_status_notify_update ON varian_barang;
-		DROP FUNCTION IF EXISTS notify_varian_barang_status_change();
-		`,
-	}
-
-	for _, drop := range drops {
-		if err := db.Exec(drop).Error; err != nil {
-			return fmt.Errorf("gagal hapus trigger/function: %w", err)
-		}
-	}
-
-	triggers := []string{
-		`
-		-- /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		-- Trigger untuk barang_induk
-		-- /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-		CREATE OR REPLACE FUNCTION notify_barang_induk_change()
+func BarangIndukDropper() string {
+	return `
+	DROP TRIGGER IF EXISTS barang_induk_trigger ON barang_induk;
+	DROP FUNCTION IF EXISTS notify_barang_induk_change();
+	`
+}
+func BarangIndukTrigger() string {
+	return `
+	CREATE OR REPLACE FUNCTION notify_barang_induk_change()
 		RETURNS trigger AS $$
 		DECLARE
 			payload JSON;
@@ -74,7 +54,6 @@ func SetupBarangTriggers(db *gorm.DB) error {
 				END IF;
 			END IF;
 
-			-- Payload sesuai action
 			IF TG_OP = 'INSERT' THEN
 				payload := json_build_object(
 					'table', TG_TABLE_NAME,
@@ -129,13 +108,23 @@ func SetupBarangTriggers(db *gorm.DB) error {
 		AFTER INSERT OR UPDATE OR DELETE ON barang_induk
 		FOR EACH ROW
 		EXECUTE FUNCTION notify_barang_induk_change();
+	`
+}
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Dropper Dan Trigger untuk kategori_barang
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-		-- /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		-- Trigger untuk kategori_barang
-		-- /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+func KategoriBarangDropper() string {
+	return `
+	DROP TRIGGER IF EXISTS kategori_barang_trigger ON kategori_barang;
+	DROP FUNCTION IF EXISTS notify_kategori_barang_change();
+	`
+}
 
-		CREATE OR REPLACE FUNCTION notify_kategori_barang_change()
+func KategoriBarangTrigger() string {
+	return `
+	CREATE OR REPLACE FUNCTION notify_kategori_barang_change()
 		RETURNS trigger AS $$
 		DECLARE
 			payload JSON;
@@ -233,13 +222,23 @@ func SetupBarangTriggers(db *gorm.DB) error {
 		AFTER INSERT OR UPDATE OR DELETE ON kategori_barang
 		FOR EACH ROW
 		EXECUTE FUNCTION notify_kategori_barang_change();
+	`
+}
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Dropper Dan Trigger untuk varian_barang
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-		-- /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		-- Trigger untuk varian_barang (khusus perubahan status)
-		-- /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+func VarianBarangDropper() string {
+	return `
+	DROP TRIGGER IF EXISTS varian_barang_status_notify_update ON varian_barang;
+	DROP FUNCTION IF EXISTS notify_varian_barang_status_change();
+	`
+}
 
-		CREATE OR REPLACE FUNCTION notify_varian_barang_status_change()
+func VarianBarangTrigger() string {
+	return `
+	CREATE OR REPLACE FUNCTION notify_varian_barang_status_change()
 		RETURNS trigger AS $$
 		DECLARE
 			payload JSON;
@@ -253,7 +252,6 @@ func SetupBarangTriggers(db *gorm.DB) error {
 				);
 				PERFORM pg_notify('varian_barang_channel', payload::text);
 			END IF;
-
 			RETURN NEW;
 		END;
 		$$ LANGUAGE plpgsql;
@@ -262,7 +260,33 @@ func SetupBarangTriggers(db *gorm.DB) error {
 		AFTER UPDATE ON varian_barang
 		FOR EACH ROW
 		EXECUTE FUNCTION notify_varian_barang_status_change();
-		`,
+	`
+}
+
+func SetupBarangTriggers(db *gorm.DB) error {
+	// Pastikan semua trigger & function lama dihapus
+	drops := []string{
+
+		BarangIndukDropper(),
+
+		KategoriBarangDropper(),
+
+		VarianBarangDropper(),
+	}
+
+	for _, drop := range drops {
+		if err := db.Exec(drop).Error; err != nil {
+			return fmt.Errorf("gagal hapus trigger/function: %w", err)
+		}
+	}
+
+	triggers := []string{
+
+		BarangIndukTrigger(),
+
+		KategoriBarangTrigger(),
+
+		VarianBarangTrigger(),
 	}
 
 	for _, trig := range triggers {

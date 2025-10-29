@@ -10,6 +10,7 @@ import (
 	maintain_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/maintain"
 	producer_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/producer"
 	trigger "github.com/anan112pcmec/Burung-backend-2/watcher_app/triggers"
+
 )
 
 func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, dsn string, Exchange string) {
@@ -26,7 +27,7 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 		fmt.Println(" Berhasil Membuat Trigger Barang")
 	}
 
-	if err := trigger.SetupKomentarTriggers(connection.DB); err != nil {
+	if err := trigger.SetupEngagementEntityTriggers(connection.DB); err != nil {
 		fmt.Println(" Gagal Membuat Trigger Komentar", err)
 	} else {
 		fmt.Println(" Berhasil Membuat Trigger Komentar")
@@ -38,12 +39,6 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 		fmt.Println(" Berhasil Membuat Trigger Transaksi")
 	}
 
-	if err := trigger.SetupInformasiKurirTriggers(connection.DB); err != nil {
-		fmt.Println(" Gagal Membuat Informasi Kurir Trigger")
-	} else {
-		fmt.Println(" Berhasil Membuat Trigger Informasi Kurir")
-	}
-
 	if err := trigger.SetupPengirimanTriggers(connection.DB); err != nil {
 		fmt.Println(" Gagal Membuat Pengiriman Trigger")
 	} else {
@@ -52,12 +47,6 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 
 	if err := producer_mb.UpConnectionDefaults(Exchange, connection.NOTIFICATION); err != nil {
 		fmt.Println(err)
-	}
-
-	if err := trigger.SetupFollowerTriggers(connection.DB); err != nil {
-		fmt.Println(" Gagal Membuat Follower Trigger")
-	} else {
-		fmt.Println(" Berhasil Membuat Follower Trigger")
 	}
 
 	wg.Add(13)
