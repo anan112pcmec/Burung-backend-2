@@ -34,9 +34,9 @@ type Pengiriman struct {
 	BiayaKirim          int16          `gorm:"column:biaya_kirim;type:int2;not null;default:0" json:"biaya_kirim_pengiriman"`
 	KurirPaid           int32          `gorm:"column:kurir_paid;type:int4;not null;default:0" json:"kurir_paid_pengiriman"`
 	BeratTotalKG        int16          `gorm:"column:berat_total_kg;type:int2;not null;default:0" json:"berat_total_kg_pengiriman"`
-	CreatedAt           time.Time      `gorm:"autoCreateTime"`
-	UpdatedAt           time.Time      `gorm:"autoUpdateTime"`
-	DeletedAt           gorm.DeletedAt `gorm:"index"`
+	CreatedAt           time.Time      `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt           time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt           gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (Pengiriman) TableName() string {
@@ -50,9 +50,9 @@ type JejakPengiriman struct {
 	Lokasi       string         `gorm:"column:lokasi;type:text;" json:"lokasi_jejak_pengiriman"`
 	Keterangan   string         `gorm:"column:keterangan;type:text;not null;" json:"keterangan_jejak_pengiriman"`
 	DicatatPada  time.Time      `gorm:"column:dicatat_pada;autoCreateTime" json:"dicatat_pada_jejak_pengiriman"`
-	CreatedAt    time.Time      `gorm:"autoCreateTime"`
-	UpdatedAt    time.Time      `gorm:"autoUpdateTime"`
-	DeletedAt    gorm.DeletedAt `gorm:"index"`
+	CreatedAt    time.Time      `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt    time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (JejakPengiriman) TableName() string {

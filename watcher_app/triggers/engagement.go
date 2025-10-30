@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"gorm.io/gorm"
+
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1254,6 +1255,7 @@ func SetupEngagementEntityTriggers(db *gorm.DB) error {
 		DiskonDropper(),
 		RekeningSellerDropper(),
 		BalanceKurirLogDropper(),
+		AlamatGudangDropper(),
 	}
 
 	for _, drop := range drops {
@@ -1281,6 +1283,7 @@ func SetupEngagementEntityTriggers(db *gorm.DB) error {
 		DiskonTrigger(),
 		RekeningSellerTrigger(),
 		BalanceKurirLogTrigger(),
+		AlamatGudangTrigger(),
 	}
 
 	for _, trig := range triggers {
