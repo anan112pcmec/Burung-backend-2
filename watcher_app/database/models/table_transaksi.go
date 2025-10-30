@@ -53,7 +53,7 @@ type Pembayaran struct {
 	KodeTransaksi      string         `gorm:"column:kode_transaksi;not null" json:"kode_transaksi_pembayaran"`
 	KodeOrderTransaksi string         `gorm:"column:kode_order;type:varchar(250);unique;not null" json:"kode_order_pembayaran"`
 	Provider           string         `gorm:"column:provider;type:text;not null;default:''" json:"provider_pembayaran"`
-	Amount             int32          `gorm:"column:amount;type:int4;not null,default:0" json:"amount_pembayaran"`
+	Amount             int32          `gorm:"column:amount;type:int4;not null;default:0" json:"amount_pembayaran"`
 	PaymentType        string         `gorm:"column:payment_type;type:varchar(120);not null" json:"payment_type_pembayaran"`
 	PaidAt             string         `gorm:"column:paid_at;type:text;not null;default:''" json:"paid_at_pembayaran"`
 	CreatedAt          time.Time      `gorm:"autoCreateTime" json:"created_at"`

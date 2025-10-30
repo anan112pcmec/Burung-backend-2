@@ -60,22 +60,22 @@ func TransaksiTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
-				'id_transaksi', NEW.id,
-				'id_pengguna_transaksi', NEW.id_pengguna,
-				'id_seller_transaksi', NEW.id_seller,
-				'id_barang_induk_transaksi', NEW.id_barang_induk,
-				'id_alamat_pengguna_transaksi', NEW.id_alamat_pengguna_transaksi,
-				'id_pembayaran_transaksi', NEW.id_pembayaran,
-				'kode_order_transaksi', NEW.kode_order,
-				'jenis_pengiriman_transaksi', NEW.jenis_pengiriman,
-				'status_transaksi', NEW.status,
-				'metode_transaksi', NEW.metode,
-				'catatan_transaksi', NEW.catatan,
-				'kuantitas_barang_transaksi', NEW.kuantitas_barang,
-				'total_transaksi', NEW.total,
-				'created_at', NEW.created_at,
-				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at,
+				'id_transaksi', OLD.id,
+				'id_pengguna_transaksi', OLD.id_pengguna,
+				'id_seller_transaksi', OLD.id_seller,
+				'id_barang_induk_transaksi', OLD.id_barang_induk,
+				'id_alamat_pengguna_transaksi', OLD.id_alamat_pengguna_transaksi,
+				'id_pembayaran_transaksi', OLD.id_pembayaran,
+				'kode_order_transaksi', OLD.kode_order,
+				'jenis_pengiriman_transaksi', OLD.jenis_pengiriman,
+				'status_transaksi', OLD.status,
+				'metode_transaksi', OLD.metode,
+				'catatan_transaksi', OLD.catatan,
+				'kuantitas_barang_transaksi', OLD.kuantitas_barang,
+				'total_transaksi', OLD.total,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', OLD.deleted_at,
 				'changed_columns', changed_columns,
 				'column_change_name', column_change_name
 			);
@@ -104,7 +104,9 @@ func TransaksiTrigger() string {
 				'total_transaksi', NEW.total,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('transaksi_channel', payload::text);
 			RETURN NEW;
@@ -131,7 +133,9 @@ func TransaksiTrigger() string {
 				'total_transaksi', OLD.total,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('transaksi_channel', payload::text);
 			RETURN OLD;
@@ -200,16 +204,16 @@ func PembayaranTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
-				'id_pembayaran', NEW.id,
-				'kode_transaksi_pembayaran', NEW.kode_transaksi,
-				'kode_order_pembayaran', NEW.kode_order,
-				'provider_pembayaran', NEW.provider,
-				'amount_pembayaran', NEW.amount,
-				'payment_type_pembayaran', NEW.payment_type,
-				'paid_at_pembayaran', NEW.paid_at,
-				'created_at', NEW.created_at,
-				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at,
+				'id_pembayaran', OLD.id,
+				'kode_transaksi_pembayaran', OLD.kode_transaksi,
+				'kode_order_pembayaran', OLD.kode_order,
+				'provider_pembayaran', OLD.provider,
+				'amount_pembayaran', OLD.amount,
+				'payment_type_pembayaran', OLD.payment_type,
+				'paid_at_pembayaran', OLD.paid_at,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', OLD.deleted_at,
 				'changed_columns', changed_columns,
 				'column_change_name', column_change_name
 			);
@@ -228,7 +232,9 @@ func PembayaranTrigger() string {
 				'paid_at_pembayaran', NEW.paid_at,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('pembayaran_channel', payload::text);
 
@@ -245,7 +251,9 @@ func PembayaranTrigger() string {
 				'paid_at_pembayaran', OLD.paid_at,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('pembayaran_channel', payload::text);
 		END IF;

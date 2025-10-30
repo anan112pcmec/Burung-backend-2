@@ -22,7 +22,7 @@ type BarangInduk struct {
 	Viewed           int32          `gorm:"column:viewed;type:int4;not null;default:0" json:"viewed_barang_induk,omitempty"`
 	Likes            int32          `gorm:"column:likes;type:int4;not null;default:0" json:"likes_barang_induk,omitempty"`
 	TotalKomentar    int32          `gorm:"column:total_komentar;type:int4;not null;default:0" json:"total_komentar_barang_induk,omitempty"`
-	HargaKategoris   int32          `gorm:"harga_kategori_barang" json:"harga_kategori_barang"`
+	HargaKategoris   int32          `gorm:"column:harga_kategori_barang" json:"harga_kategori_barang"`
 	CreatedAt        time.Time      `gorm:"autoCreateTime"`
 	UpdatedAt        time.Time      `gorm:"autoUpdateTime"`
 	DeletedAt        gorm.DeletedAt `gorm:"index"`

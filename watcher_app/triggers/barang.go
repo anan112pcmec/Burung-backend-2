@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
-
 )
 
 func BarangIndukDropper() string {
@@ -75,19 +74,19 @@ func BarangIndukTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
-				'id_barang_induk', NEW.id,
-				'id_seller_barang_induk', NEW.id_seller,
-				'nama_barang_induk', NEW.nama_barang,
-				'jenis_barang_induk', NEW.jenis_barang,
-				'original_kategori', NEW.original_kategori,
-				'deskripsi_barang_induk', NEW.deskripsi,
-				'tanggal_rilis_barang_induk', NEW.tanggal_rilis,
-				'viewed_barang_induk', NEW.viewed,
-				'likes_barang_induk', NEW.likes,
-				'total_komentar_barang_induk', NEW.total_komentar,
-				'created_at', NEW.created_at,
-				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at,
+				'id_barang_induk', OLD.id,
+				'id_seller_barang_induk', OLD.id_seller,
+				'nama_barang_induk', OLD.nama_barang,
+				'jenis_barang_induk', OLD.jenis_barang,
+				'original_kategori', OLD.original_kategori,
+				'deskripsi_barang_induk', OLD.deskripsi,
+				'tanggal_rilis_barang_induk', OLD.tanggal_rilis,
+				'viewed_barang_induk', OLD.viewed,
+				'likes_barang_induk', OLD.likes,
+				'total_komentar_barang_induk', OLD.total_komentar,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', OLD.deleted_at,
 				'changed_columns', changed_columns,
 				'column_change_name', column_change_name
 			);
@@ -114,7 +113,6 @@ func BarangIndukTrigger() string {
 				'deleted_at', NEW.deleted_at,
 				'changed_columns', '{}'::jsonb,
 				'column_change_name', ARRAY[]::TEXT[]
-				
 			);
 
 		-- =====================================================================
@@ -242,22 +240,22 @@ func KategoriBarangTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
-				'id_kategori_barang', NEW.id,
-				'id_barang_induk_kategori', NEW.id_barang_induk,
-				'id_alamat_gudang_kategori_barang', NEW.id_alamat_gudang,
-				'id_rekening_kategori_barang', NEW.id_rekening,
-				'nama_kategori_barang', NEW.nama,
-				'deskripsi_kategori_barang', NEW.deskripsi,
-				'warna_kategori_barang', NEW.warna,
-				'stok_kategori_barang', NEW.stok,
-				'harga_kategori_barang', NEW.harga,
-				'berat_gram_kategori_barang', NEW.berat_gram,
-				'dimensi_panjang_cm_kategori_barang', NEW.dimensi_panjang_cm,
-				'dimensi_lebar_cm_kategori_barang', NEW.dimensi_lebar_cm,
-				'sku_kategori_barang', NEW.sku,
-				'created_at', NEW.created_at,
-				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at,
+				'id_kategori_barang', OLD.id,
+				'id_barang_induk_kategori', OLD.id_barang_induk,
+				'id_alamat_gudang_kategori_barang', OLD.id_alamat_gudang,
+				'id_rekening_kategori_barang', OLD.id_rekening,
+				'nama_kategori_barang', OLD.nama,
+				'deskripsi_kategori_barang', OLD.deskripsi,
+				'warna_kategori_barang', OLD.warna,
+				'stok_kategori_barang', OLD.stok,
+				'harga_kategori_barang', OLD.harga,
+				'berat_gram_kategori_barang', OLD.berat_gram,
+				'dimensi_panjang_cm_kategori_barang', OLD.dimensi_panjang_cm,
+				'dimensi_lebar_cm_kategori_barang', OLD.dimensi_lebar_cm,
+				'sku_kategori_barang', OLD.sku,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', OLD.deleted_at,
 				'changed_columns', changed_columns,
 				'column_change_name', column_change_name
 			);

@@ -12,12 +12,12 @@ import (
 
 type Komentar struct {
 	ID            int64       `gorm:"primaryKey;autoIncrement" json:"id_komentar"`
-	IdBarangInduk int32       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk"`
+	IdBarangInduk int32       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_komentar"`
 	baranginduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID"`
-	IdEntity      int64       `gorm:"column:id_entity;not null" json:"id_entity"`
-	JenisEntity   string      `gorm:"column:jenis_entity;type:varchar(50);not null" json:"jenis_entity"`
+	IdEntity      int64       `gorm:"column:id_entity;not null" json:"id_entity_komentar"`
+	JenisEntity   string      `gorm:"column:jenis_entity;type:varchar(50);not null" json:"jenis_entity_komentar"`
 	Komentar      string      `gorm:"column:komentar;type:text;not null" json:"isi_komentar"`
-	ParentID      *int64      `gorm:"column:parent_id" json:"parent_id,omitempty"`
+	ParentID      *int64      `gorm:"column:parent_id" json:"parent_id_komentar,omitempty"`
 	CreatedAt     time.Time   `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt     *time.Time  `gorm:"index" json:"deleted_at,omitempty"`
@@ -253,15 +253,15 @@ func (BalanceKurirLog) TableName() string {
 }
 
 type InformasiKendaraanKurir struct {
-	ID              int64      `gorm:"primaryKey;autoIncrement" json:"id_informasi_kendaraan_kurir"`
-	IDkurir         int64      `gorm:"column:id_kurir;not null" json:"kurir_pemiliki_informasi_kendaraan"`
+	ID              int64      `gorm:"primaryKey;autoIncrement" json:"id_informasi_informasi_kendaraan_kurir"`
+	IDkurir         int64      `gorm:"column:id_kurir;not null" json:"id_kurir_informasi_kendaraan_kurir"`
 	Kurir           Kurir      `gorm:"foreignKey:IDkurir;references:ID" json:"-"`
-	JenisKendaraan  string     `gorm:"column:jenis_kendaraan;type:jenis_kendaraan_kurir;not null; default:'Motor'" json:"jenis_kendaraan_kurir"`
-	NamaKendaraan   string     `gorm:"column:nama_kendaraan;type:text;not null" json:"nama_kendaraan_kurir"`
-	RodaKendaraan   string     `gorm:"column:roda_kendaraan;type:roda_kendaraan_kurir;not null" json:"roda_kendaraan_kurir"`
-	STNK            bool       `gorm:"column:informasi_stnk;type:boolean;not null; default:false" json:"informasi_stnk_kendaraan_kurir"`
-	BPKB            bool       `gorm:"column:informasi_bpkb;type:boolean;not null; default:false" json:"informasi_bpkb_kendaraan_kurir"`
-	StatusPerizinan string     `gorm:"column:informasi_status_perizinan;type:status_perizinan_kendaraan;not null; default:'Pending'" json:"status_perizinan_kendaraan_kurir"`
+	JenisKendaraan  string     `gorm:"column:jenis_kendaraan;type:jenis_kendaraan_kurir;not null; default:'Motor'" json:"jenis_kendaraan_informasi_kendaraan_kurir"`
+	NamaKendaraan   string     `gorm:"column:nama_kendaraan;type:text;not null" json:"nama_kendaraan_informasi_kendaraan_kurir"`
+	RodaKendaraan   string     `gorm:"column:roda_kendaraan;type:roda_kendaraan_kurir;not null" json:"roda_kendaraan_informasi_kendaraan_kurir"`
+	STNK            bool       `gorm:"column:informasi_stnk;type:boolean;not null; default:false" json:"informasi_stnk_informasi_kendaraan_kurir"`
+	BPKB            bool       `gorm:"column:informasi_bpkb;type:boolean;not null; default:false" json:"informasi_bpkb_informasi_kendaraan_kurir"`
+	StatusPerizinan string     `gorm:"column:status;type:status_perizinan_kendaraan;not null; default:'Pending'" json:"status_informasi_kendaraan_kurir"`
 	CreatedAt       time.Time  `gorm:"autoCreateTime"`
 	UpdatedAt       time.Time  `gorm:"autoUpdateTime"`
 	DeletedAt       *time.Time `gorm:"index"`
@@ -273,13 +273,13 @@ func (InformasiKendaraanKurir) TableName() string {
 
 type InformasiKurir struct {
 	ID              int64      `gorm:"primaryKey;autoIncrement" json:"id_informasi_kurir"`
-	IDkurir         int64      `gorm:"column:id_kurir;not null" json:"informasi_id_kurir"`
+	IDkurir         int64      `gorm:"column:id_kurir;not null" json:"id_kurir_informasi_kurir"`
 	Kurir           Kurir      `gorm:"foreignKey:IDkurir;references:ID" json:"-"`
-	Umur            int8       `gorm:"column:umur;type:int;not null" json:"informasi_umur_kurir"`
-	Alasan          string     `gorm:"column:alasan;type:text" json:"informasi_alasan_kurir"`
-	Ktp             bool       `gorm:"column:informasi_ktp;type:boolean;not null;default:false" json:"informasi_ktp_kurir"`
-	Alamat          string     `gorm:"column:alamat;type:text" json:"informasi_alamat_kurir"`
-	StatusPerizinan string     `gorm:"column:informasi_status_perizinan;type:status_perizinan_kendaraan;not null; default:'Pending'" json:"status_perizinan_kendaraan_kurir"`
+	Umur            int8       `gorm:"column:umur;type:int;not null" json:"umur_informasi_kurir"`
+	Alasan          string     `gorm:"column:alasan;type:text" json:"alasan_informasi_kurir"`
+	Ktp             bool       `gorm:"column:informasi_ktp;type:boolean;not null;default:false" json:"informasi_ktp_informasi_kurir"`
+	Alamat          string     `gorm:"column:alamat;type:text" json:"alamat_informasi_kurir"`
+	StatusPerizinan string     `gorm:"column:status;type:status_perizinan_kendaraan;not null; default:'Pending'" json:"status_informasi_kurir"`
 	CreatedAt       time.Time  `gorm:"autoCreateTime"`
 	UpdatedAt       time.Time  `gorm:"autoUpdateTime"`
 	DeletedAt       *time.Time `gorm:"index"`

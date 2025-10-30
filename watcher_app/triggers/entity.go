@@ -6,10 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Dropper Dan Trigger untuk pengguna
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 func PenggunaDropper() string {
 	return `
 	DROP TRIGGER IF EXISTS pengguna_trigger ON pengguna;
@@ -72,10 +68,14 @@ func PenggunaTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
-				'id_user', NEW.id,
-				'created_at', NEW.created_at,
-				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at,
+				'id_user', OLD.id,
+				'username_user', OLD.username,
+				'nama_user', OLD.nama,
+				'email_user', OLD.email,
+				'status_user', OLD.status,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', OLD.deleted_at,
 				'changed_columns', changed_columns,
 				'column_change_name', column_change_name
 			);
@@ -133,7 +133,6 @@ func PenggunaTrigger() string {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dropper Dan Trigger untuk seller
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 func SellerDropper() string {
 	return `
 	DROP TRIGGER IF EXISTS seller_trigger ON seller;
@@ -151,39 +150,57 @@ func SellerTrigger() string {
 		column_change_name TEXT[] := ARRAY[]::TEXT[];
 	BEGIN
 		IF TG_OP = 'UPDATE' THEN
+			-- Deteksi perubahan kolom
 			IF OLD.username IS DISTINCT FROM NEW.username THEN
-				changed_columns := changed_columns || jsonb_build_object('username', NEW.username);
+				changed_columns := jsonb_set(changed_columns, '{username}', to_jsonb(NEW.username));
 				column_change_name := array_append(column_change_name, 'username');
 			END IF;
+
 			IF OLD.email IS DISTINCT FROM NEW.email THEN
-				changed_columns := changed_columns || jsonb_build_object('email', NEW.email);
+				changed_columns := jsonb_set(changed_columns, '{email}', to_jsonb(NEW.email));
 				column_change_name := array_append(column_change_name, 'email');
 			END IF;
+
 			IF OLD.jenis IS DISTINCT FROM NEW.jenis THEN
-				changed_columns := changed_columns || jsonb_build_object('jenis', NEW.jenis);
+				changed_columns := jsonb_set(changed_columns, '{jenis}', to_jsonb(NEW.jenis));
 				column_change_name := array_append(column_change_name, 'jenis');
 			END IF;
+
 			IF OLD.norek IS DISTINCT FROM NEW.norek THEN
-				changed_columns := changed_columns || jsonb_build_object('norek', NEW.norek);
+				changed_columns := jsonb_set(changed_columns, '{norek}', to_jsonb(NEW.norek));
 				column_change_name := array_append(column_change_name, 'norek');
 			END IF;
+
 			IF OLD.seller_dedication IS DISTINCT FROM NEW.seller_dedication THEN
-				changed_columns := changed_columns || jsonb_build_object('seller_dedication', NEW.seller_dedication);
+				changed_columns := jsonb_set(changed_columns, '{seller_dedication}', to_jsonb(NEW.seller_dedication));
 				column_change_name := array_append(column_change_name, 'seller_dedication');
 			END IF;
+
 			IF OLD.jam_operasional IS DISTINCT FROM NEW.jam_operasional THEN
-				changed_columns := changed_columns || jsonb_build_object('jam_operasional', NEW.jam_operasional);
+				changed_columns := jsonb_set(changed_columns, '{jam_operasional}', to_jsonb(NEW.jam_operasional));
 				column_change_name := array_append(column_change_name, 'jam_operasional');
 			END IF;
+
 			IF OLD.password_hash IS DISTINCT FROM NEW.password_hash THEN
-				changed_columns := changed_columns || jsonb_build_object('password_hash', 'diubah');
+				changed_columns := jsonb_set(changed_columns, '{password_hash}', to_jsonb('diubah'));
 				column_change_name := array_append(column_change_name, 'password_hash');
 			END IF;
 
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
-				'id_seller', NEW.id,
+				'id_seller', OLD.id,
+				'username_seller', OLD.username,
+				'nama_seller', OLD.nama,
+				'email_seller', OLD.email,
+				'jenis_seller', OLD.jenis,
+				'norek_seller', OLD.norek,
+				'jam_operasional_seller', OLD.jam_operasional,
+				'punchline_seller', OLD.punchline,
+				'deskripsi_seller', OLD.deskripsi,
+				'seller_dedication', OLD.seller_dedication,
+				'follower_total_seller', OLD.follower_total,
+				'status_seller', OLD.status,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
 				'deleted_at', NEW.deleted_at,
@@ -243,13 +260,12 @@ func SellerTrigger() string {
 			PERFORM pg_notify('seller_channel', payload::text);
 			RETURN OLD;
 		END IF;
-
-		RETURN NULL;
 	END;
 	$$ LANGUAGE plpgsql;
 
 	CREATE TRIGGER seller_trigger
-	AFTER INSERT OR UPDATE OR DELETE ON seller
+	AFTER INSERT OR UPDATE OR DELETE
+	ON seller
 	FOR EACH ROW
 	EXECUTE FUNCTION notify_seller_change();
 	`
@@ -259,10 +275,11 @@ func SellerTrigger() string {
 // Dropper Dan Trigger untuk kurir
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func KurirDroppper() string {
+func KurirDropper() string {
 	return `
 	DROP TRIGGER IF EXISTS kurir_trigger ON kurir;
-	DROP FUNCTION IF EXISTS notify_kurir_change();`
+	DROP FUNCTION IF EXISTS notify_kurir_change();
+	`
 }
 
 func KurirTrigger() string {
@@ -314,14 +331,29 @@ func KurirTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
-				'id_kurir', NEW.id,
+				'id_kurir', OLD.id,
+				'nama_kurir', OLD.nama,
+				'username_kurir', OLD.username,
+				'email_kurir', OLD.email,
+				'jenis_kurir', OLD.jenis,
+				'deskripsi_kurir', OLD.deskripsi,
+				'status_kurir', OLD.status,
+				'status_narik_kurir', OLD.status_narik,
+				'verified_kurir', OLD.verified,
+				'jumlah_pengiriman_kurir', OLD.jumlah_pengiriman,
+				'balance_kurir', OLD.balance_kurir,
+				'rating_kurir', OLD.rating,
+				'jumlah_rating_kurir', OLD.jumlah_rating,
+				'tipe_kendaraan_kurir', OLD.tipe_kendaraan,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
 				'deleted_at', NEW.deleted_at,
 				'changed_columns', changed_columns,
 				'column_change_name', column_change_name
 			);
-		
+			PERFORM pg_notify('kurir_channel', payload::text);
+			RETURN NEW;
+
 		ELSIF TG_OP = 'INSERT' THEN
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
@@ -335,7 +367,7 @@ func KurirTrigger() string {
 				'status_kurir', NEW.status,
 				'status_narik_kurir', NEW.status_narik,
 				'verified_kurir', NEW.verified,
-				'jumlah_pengiriman', NEW.jumlah_pengiriman,
+				'jumlah_pengiriman_kurir', NEW.jumlah_pengiriman,
 				'balance_kurir', NEW.balance_kurir,
 				'rating_kurir', NEW.rating,
 				'jumlah_rating_kurir', NEW.jumlah_rating,
@@ -346,6 +378,8 @@ func KurirTrigger() string {
 				'changed_columns', '{}'::jsonb,
 				'column_change_name', ARRAY[]::TEXT[]
 			);
+			PERFORM pg_notify('kurir_channel', payload::text);
+			RETURN NEW;
 
 		ELSIF TG_OP = 'DELETE' THEN
 			payload := json_build_object(
@@ -360,7 +394,7 @@ func KurirTrigger() string {
 				'status_kurir', OLD.status,
 				'status_narik_kurir', OLD.status_narik,
 				'verified_kurir', OLD.verified,
-				'jumlah_pengiriman', OLD.jumlah_pengiriman,
+				'jumlah_pengiriman_kurir', OLD.jumlah_pengiriman,
 				'balance_kurir', OLD.balance_kurir,
 				'rating_kurir', OLD.rating,
 				'jumlah_rating_kurir', OLD.jumlah_rating,
@@ -371,10 +405,9 @@ func KurirTrigger() string {
 				'changed_columns', '{}'::jsonb,
 				'column_change_name', ARRAY[]::TEXT[]
 			);
+			PERFORM pg_notify('kurir_channel', payload::text);
+			RETURN OLD;
 		END IF;
-
-		PERFORM pg_notify('kurir_channel', payload::text);
-		RETURN NEW;
 	END;
 	$$ LANGUAGE plpgsql;
 
@@ -382,14 +415,15 @@ func KurirTrigger() string {
 	AFTER INSERT OR UPDATE OR DELETE
 	ON kurir
 	FOR EACH ROW
-	EXECUTE FUNCTION notify_kurir_change();`
+	EXECUTE FUNCTION notify_kurir_change();
+	`
 }
 
 func SetupEntityTriggers(db *gorm.DB) error {
 	drops := []string{
 		PenggunaDropper(),
 		SellerDropper(),
-		KurirDroppper(),
+		KurirDropper(),
 	}
 
 	for _, drop := range drops {

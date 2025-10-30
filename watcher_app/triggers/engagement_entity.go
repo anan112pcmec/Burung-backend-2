@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"gorm.io/gorm"
-
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -21,37 +20,45 @@ func FollowerDropper() string {
 func FollowerTrigger() string {
 	return `
 	CREATE OR REPLACE FUNCTION notify_follower_change()
-		RETURNS trigger AS $$
-		DECLARE
-			payload JSON;
-		BEGIN
-			-- payload berdasarkan operasi
-			IF TG_OP = 'INSERT' THEN
-				payload := json_build_object(
-					'table', TG_TABLE_NAME,
-					'action', TG_OP,
-					'id_follower', NEW.id_follower,
-					'id_followed', NEW.id_followed
-				);
-			ELSIF TG_OP = 'DELETE' THEN
-				payload := json_build_object(
-					'table', TG_TABLE_NAME,
-					'action', TG_OP,
-					'id_follower', OLD.id_follower,
-					'id_followed', OLD.id_followed
-				);
-			END IF;
-
-			-- kirim ke channel follower
+	RETURNS trigger AS $$
+	DECLARE
+		payload JSON;
+	BEGIN
+		IF TG_OP = 'INSERT' THEN
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id_follower', NEW.id_follower,
+				'id_followed', NEW.id_followed,
+				'created_at', NEW.created_at,
+				'updated_at', NEW.updated_at,
+				'deleted_at', NEW.deleted_at
+			);
 			PERFORM pg_notify('follower_channel', payload::text);
 			RETURN NEW;
-		END;
-		$$ LANGUAGE plpgsql;
 
-		CREATE TRIGGER follower_trigger
-		AFTER INSERT OR DELETE ON follower
-		FOR EACH ROW
-		EXECUTE FUNCTION notify_follower_change();
+		ELSIF TG_OP = 'DELETE' THEN
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id_follower', OLD.id_follower,
+				'id_followed', OLD.id_followed,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', OLD.deleted_at
+			);
+			PERFORM pg_notify('follower_channel', payload::text);
+			RETURN OLD;
+		END IF;
+
+		RETURN NULL;
+	END;
+	$$ LANGUAGE plpgsql;
+
+	CREATE TRIGGER follower_trigger
+	AFTER INSERT OR DELETE ON follower
+	FOR EACH ROW
+	EXECUTE FUNCTION notify_follower_change();
 	`
 }
 

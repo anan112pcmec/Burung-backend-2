@@ -15,11 +15,11 @@ func VerifiedKurir(ctx context.Context, id_kurir int64, status_perizinan, jenis_
 		var diizinkan_info_kurir string = ""
 		var diizinkan_info_kendaraan string = ""
 
-		_ = db.Model(models.InformasiKurir{}).Select("informasi_status_perizinan").Where(models.InformasiKurir{
+		_ = db.Model(models.InformasiKurir{}).Select("status").Where(models.InformasiKurir{
 			IDkurir: id_kurir,
 		}).Take(&diizinkan_info_kurir)
 
-		_ = db.Model(models.InformasiKendaraanKurir{}).Select("informasi_status_perizinan").Where(models.InformasiKendaraanKurir{
+		_ = db.Model(models.InformasiKendaraanKurir{}).Select("status").Where(models.InformasiKendaraanKurir{
 			ID: id_kurir,
 		}).Take(&diizinkan_info_kendaraan)
 
