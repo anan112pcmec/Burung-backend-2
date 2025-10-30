@@ -70,9 +70,9 @@ type EntitySocialMedia struct {
 	Instagram  string     `gorm:"column:instagram;type:text" json:"instagram_social_media"`
 	Metadata   []byte     `gorm:"column:metadata;type:bytea" json:"metadata_social_media"`
 	EntityType string     `gorm:"column:entity_type;type:varchar(20);not null" json:"entity_type_social_media"`
-	CreatedAt  time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt  time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt  *time.Time `gorm:"index"`
+	CreatedAt  time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt  time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt  *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (EntitySocialMedia) TableName() string {
@@ -85,9 +85,9 @@ type AktivitasPengguna struct {
 	Pengguna       Pengguna   `gorm:"foreignKey:IdPengguna;references:ID"`
 	WaktuDilakukan time.Time  `gorm:"column:waktu_dilakukan;autoCreateTime" json:"waktu_dilakukan_aktivitas_pengguna"`
 	Aksi           string     `gorm:"column:aksi;type:aksi_pengguna" json:"aksi_aktivitas_pengguna"`
-	CreatedAt      time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt      time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt      *time.Time `gorm:"index"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (AktivitasPengguna) TableName() string {
@@ -100,9 +100,9 @@ type AktivitasSeller struct {
 	Seller         Seller     `gorm:"foreignKey:IdSeller;references:ID" json:"-"`
 	WaktuDilakukan time.Time  `gorm:"column:waktu_dilakukan;autoCreateTime" json:"waktu_dilakukan_aktivitas_seller"`
 	Aksi           string     `gorm:"column:aksi;type:aksi_seller" json:"aksi_aktivitas_seller"`
-	CreatedAt      time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt      time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt      *time.Time `gorm:"index"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (AktivitasSeller) TableName() string {
@@ -122,9 +122,9 @@ type AlamatPengguna struct {
 	Deskripsi       string         `gorm:"column:deskripsi;type:text;" json:"deskripsi_alamat_user"`
 	Longitude       float64        `gorm:"column:longitude;type:decimal(10,8);" json:"longitude_alamat_user"`
 	Latitude        float64        `gorm:"column:latitude;type:decimal(10,8);" json:"latitude_alamat_user"`
-	CreatedAt       time.Time      `gorm:"autoCreateTime"`
-	UpdatedAt       time.Time      `gorm:"autoUpdateTime"`
-	DeletedAt       gorm.DeletedAt `gorm:"index"`
+	CreatedAt       time.Time      `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt       time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt       gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (AlamatPengguna) TableName() string {
@@ -143,9 +143,9 @@ type Jenis_Seller struct {
 	Alasan           string     `gorm:"alasan_seller;type:text" json:"alasan_seller_jenis_seller"`
 	AlasanAdmin      string     `gorm:"alasan_admin;type:text" json:"alasan_admin_jenis_seller"`
 	TargetJenis      string     `gorm:"column:target_jenis;type:jenis_seller" json:"target_jenis_seller"`
-	CreatedAt        time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt        time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt        *time.Time `gorm:"index"`
+	CreatedAt        time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt        time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt        *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (Jenis_Seller) TableName() string {
@@ -162,9 +162,9 @@ type AlamatSeller struct {
 	Deskripsi       string     `gorm:"column:deskripsi;type:text;" json:"deskripsi_alamat_seller"`
 	Longitude       float64    `gorm:"column:longitude;type:decimal(10,8);" json:"longitude_alamat_seller"`
 	Latitude        float64    `gorm:"column:latitude;type:decimal(10,8);" json:"latitude_alamat_seller"`
-	CreatedAt       time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt       time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt       *time.Time `gorm:"index"`
+	CreatedAt       time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt       time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt       *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (AlamatSeller) TableName() string {
@@ -177,9 +177,9 @@ type BatalTransaksi struct {
 	ITransaksi     Transaksi  `gorm:"foreignKey:IdTransaksi;references:ID" json:"-"`
 	DibatalkanOleh string     `gorm:"column:dibatalkan_oleh;type:varchar(20);not null" json:"transaksi_dibatalkan_oleh"`
 	Alasan         string     `gorm:"column:alasan;type:text;not null" json:"alasan_batal_transaksi"`
-	CreatedAt      time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt      time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt      *time.Time `gorm:"index"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (BatalTransaksi) TableName() string {
@@ -187,10 +187,13 @@ func (BatalTransaksi) TableName() string {
 }
 
 type Follower struct {
-	IdFollower int64    `gorm:"column:id_follower;not null" json:"id_follower"`
-	Pengguna   Pengguna `gorm:"foreignKey:IdFollower;references:ID"` // user yang follow
-	IdFollowed int64    `gorm:"column:id_followed;not null" json:"id_followed"`
-	Seller     Seller   `gorm:"foreignKey:IdFollowed;references:ID"` // seller yang di-follow
+	IdFollower int64      `gorm:"column:id_follower;not null" json:"id_follower"`
+	Pengguna   Pengguna   `gorm:"foreignKey:IdFollower;references:ID"` // user yang follow
+	IdFollowed int64      `gorm:"column:id_followed;not null" json:"id_followed"`
+	Seller     Seller     `gorm:"foreignKey:IdFollowed;references:ID"` // seller yang di-follow
+	CreatedAt  time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt  time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt  *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (Follower) TableName() string {
@@ -203,6 +206,9 @@ type Diskon struct {
 	Deskripsi     string      `gorm:"column:deskripsi;type:text" json:"deskripsi_diskon"`
 	Berlaku       time.Time   `gorm:"column:berlaku;type:date;not null" json:"berlaku_diskon"`
 	Expired       time.Time   `gorm:"column:expired;type:date;not null" json:"expired_diskon"`
+	CreatedAt     time.Time   `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt     time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt     *time.Time  `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (Diskon) TableName() string {
@@ -217,9 +223,9 @@ type RekeningSeller struct {
 	PemilikRekening string     `gorm:"column:pemilik_rekening;type:varchar(100);not null" json:"pemilik_rekening_seller"`
 	IsDefault       bool       `gorm:"column:id_default;default:false" json:"is_default_rekening_seller"`
 	Status          string     `gorm:"column:status;type:varchar(20);default:'pending'" json:"status_rekening_seller"`
-	CreatedAt       time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt       time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt       *time.Time `gorm:"index"`
+	CreatedAt       time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt       time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt       *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (RekeningSeller) TableName() string {
@@ -231,13 +237,15 @@ func (RekeningSeller) TableName() string {
 // ///////////////////////////////////////////////////////////////////////////////////////////
 
 type BalanceKurirLog struct {
-	ID        int64     `gorm:"primaryKey;autoIncrement" json:"id_balance_kurir"`
-	KurirID   int64     `gorm:"column:kurir_id;not null" json:"kurir_id"`
-	Kurir     Kurir     `gorm:"foreignKey:KurirID;references:ID" json:"-"`
-	Amount    int64     `gorm:"column:amount;type:bigint;default:0" json:"amount_balance_kurir"`
-	Type      string    `gorm:"column:type;type:varchar(10);default:'credit'" json:"type_balance_kurir"`
-	Catatan   string    `gorm:"column:catatan;type:text" json:"catatan_balance_kurir"`
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"dibuat_pada"`
+	ID        int64      `gorm:"primaryKey;autoIncrement" json:"id_balance_kurir"`
+	KurirID   int64      `gorm:"column:kurir_id;not null" json:"kurir_id"`
+	Kurir     Kurir      `gorm:"foreignKey:KurirID;references:ID" json:"-"`
+	Amount    int64      `gorm:"column:amount;type:bigint;default:0" json:"amount_balance_kurir"`
+	Type      string     `gorm:"column:type;type:varchar(10);default:'credit'" json:"type_balance_kurir"`
+	Catatan   string     `gorm:"column:catatan;type:text" json:"catatan_balance_kurir"`
+	CreatedAt time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (BalanceKurirLog) TableName() string {

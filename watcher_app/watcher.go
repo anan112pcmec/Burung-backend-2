@@ -10,7 +10,6 @@ import (
 	maintain_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/maintain"
 	producer_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/producer"
 	trigger "github.com/anan112pcmec/Burung-backend-2/watcher_app/triggers"
-
 )
 
 func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, dsn string, Exchange string) {
