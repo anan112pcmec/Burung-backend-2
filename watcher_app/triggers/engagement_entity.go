@@ -367,7 +367,7 @@ func InformasiKendaraanKurirTrigger() string {
 				'changed_columns', changed_columns,
 				'column_change_name', column_change_name
 			);
-			PERFORM pg_notify('informasi_kurir_channel', payload::text);
+			PERFORM pg_notify('informasi_kendaraan_kurir_channel', payload::text);
 			RETURN NEW;
 		END IF;
 
@@ -427,7 +427,7 @@ func InformasiKendaraanKurirTrigger() string {
 				'changed_columns', changed_columns,
 				'column_change_name', column_change_name
 			);
-			PERFORM pg_notify('informasi_kurir_channel', payload::text);
+			PERFORM pg_notify('informasi_kendaraan_kurir_channel', payload::text);
 			RETURN NEW;
 		END IF;
 
@@ -452,7 +452,7 @@ func InformasiKendaraanKurirTrigger() string {
 				'changed_columns', changed_columns,
 				'column_change_name', column_change_name
 			);
-			PERFORM pg_notify('informasi_kurir_channel', payload::text);
+			PERFORM pg_notify('informasi_kendaraan_kurir_channel', payload::text);
 			RETURN OLD;
 		END IF;
 

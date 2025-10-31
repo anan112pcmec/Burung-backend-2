@@ -80,3 +80,50 @@ func Pengiriman_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) {
 		}
 	}
 }
+
+func JejakPengiriman_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) {
+	fmt.Println("Menjalankan Jejak Pengiriman Watcher")
+
+	minReconn := 10 * time.Second
+	maxReconn := time.Minute
+
+	listener := pq.NewListener(dsn, minReconn, maxReconn, func(event pq.ListenerEventType, err error) {
+		if err != nil {
+			log.Printf("[Listener Error] %v", err)
+		}
+	})
+
+	if err := listener.Listen("jejak_pengiriman_channel"); err != nil {
+		log.Printf("❌ Gagal listen jejak_pengiriman_channel: %v", err)
+		return
+	}
+
+	ticker := time.NewTicker(90 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case n := <-listener.Notify:
+			if n == nil {
+				continue
+			}
+
+			fmt.Printf("🔔 Dapat notify Informasi Pengiriman: %s\n", n.Extra)
+
+			var data notify_payload.NotifyResponsePengiriman
+			if err := json.Unmarshal([]byte(n.Extra), &data); err != nil {
+				fmt.Println("❌ Gagal Parse JSON:", err)
+				continue
+			}
+
+		case <-ticker.C:
+			if err := listener.Ping(); err != nil {
+				log.Printf("[Ping Listener] error: %v", err)
+			}
+
+		case <-ctx.Done():
+			fmt.Println("🔴 Jejak Pengiriman dihentikan")
+			return
+		}
+	}
+}
