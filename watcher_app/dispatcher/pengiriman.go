@@ -15,7 +15,7 @@ import (
 	seller_order_processing_watcher "github.com/anan112pcmec/Burung-backend-2/watcher_app/services/seller/order_processing_services"
 )
 
-func Informasi_Pengiriman_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) {
+func Pengiriman_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) {
 	fmt.Println("Menjalankan Informasi Pengiriman Watcher")
 
 	minReconn := 10 * time.Second

@@ -23,8 +23,33 @@ func FollowerTrigger() string {
 	RETURNS trigger AS $$
 	DECLARE
 		payload JSON;
+		changed_columns JSONB := '{}'::jsonb;
+		column_change_name TEXT[] := ARRAY[]::TEXT[];
 	BEGIN
-		IF TG_OP = 'INSERT' THEN
+		IF TG_OP = 'UPDATE' THEN
+			-- Deteksi perubahan kolom
+
+			IF OLD.id_follower IS DISTINCT FROM NEW.id_follower THEN
+				changed_columns := jsonb_set(changed_columns, '{id_follower}', to_jsonb(NEW.id_follower));
+				column_change_name := array_append(column_change_name, 'id_follower');
+			END IF;
+
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id_follower', OLD.id_follower,
+				'id_followed', OLD.id_followed,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', OLD.deleted_at,
+				'column_change_name', column_change_name,
+				'changed_columns', changed_columns
+			);
+
+			PERFORM pg_notify('follower_channel', payload::text);
+			RETURN NEW;
+
+		ELSIF TG_OP = 'INSERT' THEN
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
@@ -32,8 +57,11 @@ func FollowerTrigger() string {
 				'id_followed', NEW.id_followed,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+				'column_change_name', column_change_name,
+				'changed_columns', changed_columns
 			);
+
 			PERFORM pg_notify('follower_channel', payload::text);
 			RETURN NEW;
 
@@ -47,6 +75,7 @@ func FollowerTrigger() string {
 				'updated_at', OLD.updated_at,
 				'deleted_at', OLD.deleted_at
 			);
+
 			PERFORM pg_notify('follower_channel', payload::text);
 			RETURN OLD;
 		END IF;
@@ -56,7 +85,7 @@ func FollowerTrigger() string {
 	$$ LANGUAGE plpgsql;
 
 	CREATE TRIGGER follower_trigger
-	AFTER INSERT OR DELETE ON follower
+	AFTER INSERT OR UPDATE OR DELETE ON follower
 	FOR EACH ROW
 	EXECUTE FUNCTION notify_follower_change();
 	`
@@ -75,51 +104,93 @@ func KomentarDropper() string {
 
 func KomentarTrigger() string {
 	return `
-		CREATE OR REPLACE FUNCTION notify_komentar_change()
-		RETURNS trigger AS $$
-		DECLARE
-			payload JSON;
-		BEGIN
-			-- payload berdasarkan operasi
-			IF TG_OP = 'INSERT' THEN
-				payload := json_build_object(
-					'table', TG_TABLE_NAME,
-					'action', TG_OP,
-					'id_komentar', NEW.id,
-					'id_barang_induk', NEW.id_barang_induk,
-					'id_entity', NEW.id_entity,
-					'jenis_entity', NEW.jenis_entity,
-					'isi_komentar', NEW.komentar,
-					'parent_id', NEW.parent_id,
-					'created_at', NEW.created_at,
-					'updated_at', NEW.updated_at,
-					'deleted_at', NEW.deleted_at
-				);
-			ELSIF TG_OP = 'UPDATE' THEN
-				payload := json_build_object(
-					'table', TG_TABLE_NAME,
-					'action', TG_OP,
-					'id_komentar', NEW.id,
-					'isi_komentar', NEW.komentar
-				);
-			ELSIF TG_OP = 'DELETE' THEN
-				payload := json_build_object(
-					'table', TG_TABLE_NAME,
-					'action', TG_OP,
-					'id_komentar', OLD.id
-				);
+	CREATE OR REPLACE FUNCTION notify_komentar_change()
+	RETURNS trigger AS $$
+	DECLARE
+		payload JSON;
+		changed_columns JSONB := '{}'::jsonb;
+		column_change_name TEXT[] := ARRAY[]::TEXT[];
+	BEGIN
+		IF TG_OP = 'UPDATE' THEN
+			-- Deteksi perubahan kolom komentar
+			IF OLD.komentar IS DISTINCT FROM NEW.komentar THEN
+				changed_columns := jsonb_set(changed_columns, '{isi_komentar}', to_jsonb(NEW.komentar));
+				column_change_name := array_append(column_change_name, 'isi_komentar');
 			END IF;
 
-			-- kirim ke channel komentar
+			IF OLD.updated_at IS DISTINCT FROM NEW.updated_at THEN
+				changed_columns := jsonb_set(changed_columns, '{updated_at}', to_jsonb(NEW.updated_at));
+				column_change_name := array_append(column_change_name, 'updated_at');
+			END IF;
+
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id_komentar', NEW.id,
+				'id_barang_induk_komentar', NEW.id_barang_induk,
+				'id_entity_komentar', NEW.id_entity,
+				'jenis_entity_komentar', NEW.jenis_entity,
+				'isi_komentar', NEW.komentar,
+				'parent_id_komentar', NEW.parent_id,
+				'created_at', NEW.created_at,
+				'updated_at', NEW.updated_at,
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', changed_columns
+				'column_change_name', column_change_name,
+			);
+
 			PERFORM pg_notify('komentar_channel', payload::text);
 			RETURN NEW;
-		END;
-		$$ LANGUAGE plpgsql;
 
-		CREATE TRIGGER komentar_trigger
-		AFTER INSERT OR UPDATE OR DELETE ON komentar
-		FOR EACH ROW
-		EXECUTE FUNCTION notify_komentar_change();
+		ELSIF TG_OP = 'INSERT' THEN
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id_komentar', NEW.id,
+				'id_barang_induk_komentar', NEW.id_barang_induk,
+				'id_entity_komentar', NEW.id_entity,
+				'jenis_entity_komentar', NEW.jenis_entity,
+				'isi_komentar', NEW.komentar,
+				'parent_id_komentar', NEW.parent_id,
+				'created_at', NEW.created_at,
+				'updated_at', NEW.updated_at,
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
+			);
+
+			PERFORM pg_notify('komentar_channel', payload::text);
+			RETURN NEW;
+
+		ELSIF TG_OP = 'DELETE' THEN
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id_komentar', OLD.id,
+				'id_barang_induk_komentar', OLD.id_barang_induk,
+				'id_entity_komentar', OLD.id_entity,
+				'jenis_entity_komentar', OLD.jenis_entity,
+				'isi_komentar', OLD.komentar,
+				'parent_id_komentar', OLD.parent_id,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
+			);
+
+			PERFORM pg_notify('komentar_channel', payload::text);
+			RETURN OLD;
+		END IF;
+
+		RETURN NULL;
+	END;
+	$$ LANGUAGE plpgsql;
+
+	CREATE TRIGGER komentar_trigger
+	AFTER INSERT OR UPDATE OR DELETE ON komentar
+	FOR EACH ROW
+	EXECUTE FUNCTION notify_komentar_change();
 	`
 }
 
@@ -129,36 +200,129 @@ func KomentarTrigger() string {
 
 func InformasiKurirDropper() string {
 	return `
-	DROP TRIGGER IF EXISTS info_kurir_trigger ON informasi_kurir;
-	DROP FUNCTION IF EXISTS notify_info_kurir_change();
+	DROP TRIGGER IF EXISTS informasi_kurir_trigger ON informasi_kurir;
+	DROP FUNCTION IF EXISTS notify_informasi_kurir_change();
 	`
 }
 
 func InformasiKurirTrigger() string {
 	return `
-	CREATE OR REPLACE FUNCTION notify_info_kurir_change()
-		RETURNS trigger AS $$
-		DECLARE
-			payload JSON;
-		BEGIN
-			IF TG_OP = 'UPDATE' THEN
-				payload := json_build_object(
-					'table', TG_TABLE_NAME,
-					'action', TG_OP,
-					'informasi_id_kurir', NEW.id_kurir,
-					'status_perizinan_kurir', NEW.informasi_status_perizinan,
-					'jenis_kendaraan', 'kosong'
-				);
-				PERFORM pg_notify('informasi_kurir_channel', payload::text);
+	CREATE OR REPLACE FUNCTION notify_informasi_kurir_change()
+	RETURNS trigger AS $$
+	DECLARE
+		payload JSON;
+		changed_columns JSONB := '{}'::jsonb;
+		column_change_name TEXT[] := ARRAY[]::TEXT[];
+	BEGIN
+		-- ======================================================
+		-- HANDLE UPDATE: deteksi perubahan per kolom
+		-- ======================================================
+		IF TG_OP = 'UPDATE' THEN
+			IF OLD.umur IS DISTINCT FROM NEW.umur THEN
+				changed_columns := jsonb_set(changed_columns, '{umur_informasi_kurir}', to_jsonb(NEW.umur));
+				column_change_name := array_append(column_change_name, 'umur_informasi_kurir');
 			END IF;
-			RETURN NEW;
-		END;
-		$$ LANGUAGE plpgsql;
 
-		CREATE TRIGGER info_kurir_trigger
-		AFTER UPDATE ON informasi_kurir
-		FOR EACH ROW
-		EXECUTE FUNCTION notify_info_kurir_change();
+			IF OLD.alasan IS DISTINCT FROM NEW.alasan THEN
+				changed_columns := jsonb_set(changed_columns, '{alasan_informasi_kurir}', to_jsonb(NEW.alasan));
+				column_change_name := array_append(column_change_name, 'alasan_informasi_kurir');
+			END IF;
+
+			IF OLD.informasi_ktp IS DISTINCT FROM NEW.informasi_ktp THEN
+				changed_columns := jsonb_set(changed_columns, '{informasi_ktp_informasi_kurir}', to_jsonb(NEW.informasi_ktp));
+				column_change_name := array_append(column_change_name, 'informasi_ktp_informasi_kurir');
+			END IF;
+
+			IF OLD.alamat IS DISTINCT FROM NEW.alamat THEN
+				changed_columns := jsonb_set(changed_columns, '{alamat_informasi_kurir}', to_jsonb(NEW.alamat));
+				column_change_name := array_append(column_change_name, 'alamat_informasi_kurir');
+			END IF;
+
+			IF OLD.status IS DISTINCT FROM NEW.status THEN
+				changed_columns := jsonb_set(changed_columns, '{status_informasi_kurir}', to_jsonb(NEW.status));
+				column_change_name := array_append(column_change_name, 'status_informasi_kurir');
+			END IF;
+
+			IF OLD.informasi_status_perizinan IS DISTINCT FROM NEW.informasi_status_perizinan THEN
+				changed_columns := jsonb_set(changed_columns, '{status_perizinan_kurir}', to_jsonb(NEW.informasi_status_perizinan));
+				column_change_name := array_append(column_change_name, 'status_perizinan_kurir');
+			END IF;
+
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id_informasi_kurir', OLD.id,
+				'id_kurir_informasi_kurir', OLD.id_kurir,
+				'umur_informasi_kurir', OLD.umur,
+				'alasan_informasi_kurir', OLD.alasan,
+				'informasi_ktp_informasi_kurir', OLD.informasi_ktp,
+				'alamat_informasi_kurir', OLD.alamat,
+				'status_informasi_kurir', OLD.status,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', changed_columns,
+				'column_change_name', column_change_name
+			);
+
+			PERFORM pg_notify('informasi_kurir_channel', payload::text);
+			RETURN NEW;
+
+		-- ======================================================
+		-- HANDLE INSERT
+		-- ======================================================
+		ELSIF TG_OP = 'INSERT' THEN
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id_informasi_kurir', NEW.id,
+				'id_kurir_informasi_kurir', NEW.id_kurir,
+				'umur_informasi_kurir', NEW.umur,
+				'alasan_informasi_kurir', NEW.alasan,
+				'informasi_ktp_informasi_kurir', NEW.informasi_ktp,
+				'alamat_informasi_kurir', NEW.alamat,
+				'status_informasi_kurir', NEW.status,
+				'created_at', NEW.created_at,
+				'updated_at', NEW.updated_at,
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', changed_columns,
+				'column_change_name', column_change_name
+			);
+
+			PERFORM pg_notify('informasi_kurir_channel', payload::text);
+			RETURN NEW;
+
+		-- ======================================================
+		-- HANDLE DELETE
+		-- ======================================================
+		ELSIF TG_OP = 'DELETE' THEN
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id_informasi_kurir', OLD.id,
+				'id_kurir_informasi_kurir', OLD.id_kurir,
+				'umur_informasi_kurir', OLD.umur,
+				'alasan_informasi_kurir', OLD.alasan,
+				'informasi_ktp_informasi_kurir', OLD.informasi_ktp,
+				'alamat_informasi_kurir', OLD.alamat,
+				'status_informasi_kurir', OLD.status,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', OLD.deleted_at
+			);
+
+			PERFORM pg_notify('informasi_kurir_channel', payload::text);
+			RETURN OLD;
+		END IF;
+
+		RETURN NULL;
+	END;
+	$$ LANGUAGE plpgsql;
+
+	CREATE TRIGGER informasi_kurir_trigger
+	AFTER INSERT OR UPDATE OR DELETE ON informasi_kurir
+	FOR EACH ROW
+	EXECUTE FUNCTION notify_informasi_kurir_change();
 	`
 }
 
@@ -168,37 +332,139 @@ func InformasiKurirTrigger() string {
 
 func InformasiKendaraanKurirDropper() string {
 	return `
-	DROP TRIGGER IF EXISTS info_kendaraan_trigger ON informasi_kendaraan_kurir;
-	DROP FUNCTION IF EXISTS notify_info_kendaraan_change();
+	DROP TRIGGER IF EXISTS informasi_kendaraan_trigger ON informasi_kendaraan_kurir;
+	DROP FUNCTION IF EXISTS notify_informasi_kendaraan_change();
 	`
 }
 
 func InformasiKendaraanKurirTrigger() string {
 	return `
-	CREATE OR REPLACE FUNCTION notify_info_kendaraan_change()
-		RETURNS trigger AS $$
-		DECLARE
-			payload JSON;
-		BEGIN
-			IF TG_OP = 'UPDATE' THEN
-				payload := json_build_object(
-					'table', TG_TABLE_NAME,
-					'action', TG_OP,
-					'informasi_id_kurir', NEW.id_kurir,
-					'status_perizinan_kurir', NEW.informasi_status_perizinan,
-					'jenis_kendaraan', NEW.jenis_kendaraan
-				);
-				PERFORM pg_notify('informasi_kurir_channel', payload::text);
-			END IF;
+	CREATE OR REPLACE FUNCTION notify_informasi_kendaraan_change()
+	RETURNS trigger AS $$
+	DECLARE
+		payload JSON;
+		changed_columns JSONB := '{}'::jsonb;
+		column_change_name TEXT[] := ARRAY[]::TEXT[];
+	BEGIN
+		-- ======================================================
+		-- HANDLE INSERT
+		-- ======================================================
+		IF TG_OP = 'INSERT' THEN
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id_informasi_kendaraan_kurir', NEW.id,
+				'id_kurir_informasi_kendaraan_kurir', NEW.id_kurir,
+				'jenis_kendaraan_informasi_kendaraan_kurir', NEW.jenis_kendaraan_kurir,
+				'nama_kendaraan_informasi_kendaraan_kurir', NEW.nama_kendaraan,
+				'roda_kendaraan_informasi_kendaraan_kurir', NEW.roda_kendaraan,
+				'informasi_stnk_informasi_kendaraan_kurir', NEW.informasi_stnk,
+				'informasi_bpkb_informasi_kendaraan_kurir', NEW.informasi_bpkb,
+				'status_informasi_kendaraan_kurir', NEW.status,
+				'created_at', NOW(),
+				'updated_at', NOW(),
+				'deleted_at', NULL,
+				'changed_columns', changed_columns,
+				'column_change_name', column_change_name
+			);
+			PERFORM pg_notify('informasi_kurir_channel', payload::text);
 			RETURN NEW;
-		END;
-		$$ LANGUAGE plpgsql;
+		END IF;
 
-		CREATE TRIGGER info_kendaraan_trigger
-		AFTER UPDATE ON informasi_kendaraan_kurir
-		FOR EACH ROW
-		EXECUTE FUNCTION notify_info_kendaraan_change();
-		`
+		-- ======================================================
+		-- HANDLE UPDATE (deteksi perubahan kolom)
+		-- ======================================================
+		IF TG_OP = 'UPDATE' THEN
+			IF OLD.id_kurir IS DISTINCT FROM NEW.id_kurir THEN
+				changed_columns := jsonb_set(changed_columns, '{id_kurir_informasi_kendaraan_kurir}', to_jsonb(NEW.id_kurir));
+				column_change_name := array_append(column_change_name, 'id_kurir_informasi_kendaraan_kurir');
+			END IF;
+
+			IF OLD.jenis_kendaraan_kurir IS DISTINCT FROM NEW.jenis_kendaraan_kurir THEN
+				changed_columns := jsonb_set(changed_columns, '{jenis_kendaraan_informasi_kendaraan_kurir}', to_jsonb(NEW.jenis_kendaraan_kurir));
+				column_change_name := array_append(column_change_name, 'jenis_kendaraan_informasi_kendaraan_kurir');
+			END IF;
+
+			IF OLD.nama_kendaraan IS DISTINCT FROM NEW.nama_kendaraan THEN
+				changed_columns := jsonb_set(changed_columns, '{nama_kendaraan_informasi_kendaraan_kurir}', to_jsonb(NEW.nama_kendaraan));
+				column_change_name := array_append(column_change_name, 'nama_kendaraan_informasi_kendaraan_kurir');
+			END IF;
+
+			IF OLD.roda_kendaraan IS DISTINCT FROM NEW.roda_kendaraan THEN
+				changed_columns := jsonb_set(changed_columns, '{roda_kendaraan_informasi_kendaraan_kurir}', to_jsonb(NEW.roda_kendaraan));
+				column_change_name := array_append(column_change_name, 'roda_kendaraan_informasi_kendaraan_kurir');
+			END IF;
+
+			IF OLD.informasi_stnk IS DISTINCT FROM NEW.informasi_stnk THEN
+				changed_columns := jsonb_set(changed_columns, '{informasi_stnk_informasi_kendaraan_kurir}', to_jsonb(NEW.informasi_stnk));
+				column_change_name := array_append(column_change_name, 'informasi_stnk_informasi_kendaraan_kurir');
+			END IF;
+
+			IF OLD.informasi_bpkb IS DISTINCT FROM NEW.informasi_bpkb THEN
+				changed_columns := jsonb_set(changed_columns, '{informasi_bpkb_informasi_kendaraan_kurir}', to_jsonb(NEW.informasi_bpkb));
+				column_change_name := array_append(column_change_name, 'informasi_bpkb_informasi_kendaraan_kurir');
+			END IF;
+
+			IF OLD.status IS DISTINCT FROM NEW.status THEN
+				changed_columns := jsonb_set(changed_columns, '{status_informasi_kendaraan_kurir}', to_jsonb(NEW.status));
+				column_change_name := array_append(column_change_name, 'status_informasi_kendaraan_kurir');
+			END IF;
+
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id_informasi_kendaraan_kurir', NEW.id,
+				'id_kurir_informasi_kendaraan_kurir', NEW.id_kurir,
+				'jenis_kendaraan_informasi_kendaraan_kurir', NEW.jenis_kendaraan_kurir,
+				'nama_kendaraan_informasi_kendaraan_kurir', NEW.nama_kendaraan,
+				'roda_kendaraan_informasi_kendaraan_kurir', NEW.roda_kendaraan,
+				'informasi_stnk_informasi_kendaraan_kurir', NEW.informasi_stnk,
+				'informasi_bpkb_informasi_kendaraan_kurir', NEW.informasi_bpkb,
+				'status_informasi_kendaraan_kurir', NEW.status,
+				'created_at', OLD.created_at,
+				'updated_at', NOW(),
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', changed_columns,
+				'column_change_name', column_change_name
+			);
+			PERFORM pg_notify('informasi_kurir_channel', payload::text);
+			RETURN NEW;
+		END IF;
+
+		-- ======================================================
+		-- HANDLE DELETE
+		-- ======================================================
+		IF TG_OP = 'DELETE' THEN
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id_informasi_kendaraan_kurir', OLD.id,
+				'id_kurir_informasi_kendaraan_kurir', OLD.id_kurir,
+				'jenis_kendaraan_informasi_kendaraan_kurir', OLD.jenis_kendaraan_kurir,
+				'nama_kendaraan_informasi_kendaraan_kurir', OLD.nama_kendaraan,
+				'roda_kendaraan_informasi_kendaraan_kurir', OLD.roda_kendaraan,
+				'informasi_stnk_informasi_kendaraan_kurir', OLD.informasi_stnk,
+				'informasi_bpkb_informasi_kendaraan_kurir', OLD.informasi_bpkb,
+				'status_informasi_kendaraan_kurir', OLD.status,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', NOW(),
+				'changed_columns', changed_columns,
+				'column_change_name', column_change_name
+			);
+			PERFORM pg_notify('informasi_kurir_channel', payload::text);
+			RETURN OLD;
+		END IF;
+
+		RETURN NULL;
+	END;
+	$$ LANGUAGE plpgsql;
+
+	CREATE TRIGGER informasi_kendaraan_trigger
+	AFTER INSERT OR UPDATE OR DELETE ON informasi_kendaraan_kurir
+	FOR EACH ROW
+	EXECUTE FUNCTION notify_informasi_kendaraan_change();
+	`
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -218,23 +484,53 @@ func KeranjangTrigger() string {
 	RETURNS trigger AS $$
 	DECLARE
 		payload JSON;
+		changed_columns JSONB := '{}'::jsonb;
+		column_change_name TEXT[] := ARRAY[]::TEXT[];
 	BEGIN
+		-- ============================================================
+		-- HANDLE UPDATE
+		-- ============================================================
 		IF TG_OP = 'UPDATE' THEN
+			IF OLD.id_seller IS DISTINCT FROM NEW.id_seller THEN
+				changed_columns := jsonb_set(changed_columns, '{id_seller}', to_jsonb(NEW.id_seller));
+				column_change_name := array_append(column_change_name, 'id_seller');
+			END IF;
+			IF OLD.id_barang_induk IS DISTINCT FROM NEW.id_barang_induk THEN
+				changed_columns := jsonb_set(changed_columns, '{id_barang_induk}', to_jsonb(NEW.id_barang_induk));
+				column_change_name := array_append(column_change_name, 'id_barang_induk');
+			END IF;
+			IF OLD.id_kategori_barang IS DISTINCT FROM NEW.id_kategori_barang THEN
+				changed_columns := jsonb_set(changed_columns, '{id_kategori_barang}', to_jsonb(NEW.id_kategori_barang));
+				column_change_name := array_append(column_change_name, 'id_kategori_barang');
+			END IF;
+			IF OLD.count IS DISTINCT FROM NEW.count THEN
+				changed_columns := jsonb_set(changed_columns, '{count}', to_jsonb(NEW.count));
+				column_change_name := array_append(column_change_name, 'count');
+			END IF;
+			IF OLD.status IS DISTINCT FROM NEW.status THEN
+				changed_columns := jsonb_set(changed_columns, '{status}', to_jsonb(NEW.status));
+				column_change_name := array_append(column_change_name, 'status');
+			END IF;
+
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
-				'id_pengguna_keranjang', NEW.id,
-				'id_seller_barang_induk_keranjang', NEW.id_seller,
-				'id_barang_induk_keranjang', NEW.id_barang_induk,
-				'id_kategori_barang_keranjang', NEW.id_kategori_barang,
-				'count_keranjang', NEW.count,
-				'status_keranjang', NEW.status,
-				'created_at', NEW.created_at,
-				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'id_pengguna_keranjang', OLD.id,
+				'id_seller_barang_induk_keranjang', OLD.id_seller,
+				'id_barang_induk_keranjang', OLD.id_barang_induk,
+				'id_kategori_barang_keranjang', OLD.id_kategori_barang,
+				'count_keranjang', OLD.count,
+				'status_keranjang', OLD.status,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', changed_columns,
+				'column_change_name', column_change_name
 			);
-			PERFORM pg_notify('keranjang_channel', payload::text);
 
+		-- ============================================================
+		-- HANDLE INSERT
+		-- ============================================================
 		ELSIF TG_OP = 'INSERT' THEN
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
@@ -247,10 +543,14 @@ func KeranjangTrigger() string {
 				'status_keranjang', NEW.status,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
-			PERFORM pg_notify('keranjang_channel', payload::text);
 
+		-- ============================================================
+		-- HANDLE DELETE
+		-- ============================================================
 		ELSIF TG_OP = 'DELETE' THEN
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
@@ -263,11 +563,13 @@ func KeranjangTrigger() string {
 				'status_keranjang', OLD.status,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
-			PERFORM pg_notify('keranjang_channel', payload::text);
 		END IF;
 
+		PERFORM pg_notify('keranjang_channel', payload::text);
 		RETURN NEW;
 	END;
 	$$ LANGUAGE plpgsql;
@@ -296,11 +598,32 @@ func BarangDisukaiTrigger() string {
 	RETURNS trigger AS $$
 	DECLARE
 		payload JSON;
+		changed_columns JSONB := '{}'::jsonb;
+		column_change_name TEXT[] := ARRAY[]::TEXT[];
 	BEGIN
 		IF TG_OP = 'UPDATE' THEN
+			-- Deteksi kolom yang berubah
+			IF OLD.id_pengguna IS DISTINCT FROM NEW.id_pengguna THEN
+				changed_columns := jsonb_set(changed_columns, '{id_pengguna_barang_disukai}', to_jsonb(NEW.id_pengguna));
+				column_change_name := array_append(column_change_name, 'id_pengguna_barang_disukai');
+			END IF;
+
+			IF OLD.id_barang_induk IS DISTINCT FROM NEW.id_barang_induk THEN
+				changed_columns := jsonb_set(changed_columns, '{id_barang_induk_disukai}', to_jsonb(NEW.id_barang_induk));
+				column_change_name := array_append(column_change_name, 'id_barang_induk_disukai');
+			END IF;
+
+			IF OLD.updated_at IS DISTINCT FROM NEW.updated_at THEN
+				changed_columns := jsonb_set(changed_columns, '{updated_at}', to_jsonb(NEW.updated_at));
+				column_change_name := array_append(column_change_name, 'updated_at');
+			END IF;
+
+			-- Bangun payload untuk UPDATE
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+				'changed_columns', changed_columns,
+				'column_change_name', column_change_name,
 				'id_pengguna_barang_disukai', NEW.id_pengguna,
 				'id_barang_induk_disukai', NEW.id_barang_induk,
 				'created_at', NEW.created_at,
@@ -310,6 +633,7 @@ func BarangDisukaiTrigger() string {
 			PERFORM pg_notify('barang_disukai_channel', payload::text);
 
 		ELSIF TG_OP = 'INSERT' THEN
+			-- Bangun payload untuk INSERT
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
@@ -317,11 +641,14 @@ func BarangDisukaiTrigger() string {
 				'id_barang_induk_disukai', NEW.id_barang_induk,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('barang_disukai_channel', payload::text);
 
 		ELSIF TG_OP = 'DELETE' THEN
+			-- Bangun payload untuk DELETE
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
@@ -329,7 +656,9 @@ func BarangDisukaiTrigger() string {
 				'id_barang_induk_disukai', OLD.id_barang_induk,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('barang_disukai_channel', payload::text);
 		END IF;
@@ -338,6 +667,7 @@ func BarangDisukaiTrigger() string {
 	END;
 	$$ LANGUAGE plpgsql;
 
+	DROP TRIGGER IF EXISTS barang_disukai_trigger ON barang_disukai;
 	CREATE TRIGGER barang_disukai_trigger
 	AFTER INSERT OR UPDATE OR DELETE ON barang_disukai
 	FOR EACH ROW
@@ -362,11 +692,54 @@ func EntitySocialMediaTrigger() string {
 	RETURNS trigger AS $$
 	DECLARE
 		payload JSON;
+		changed_columns JSONB := '{}'::jsonb;
+		column_change_name TEXT[] := ARRAY[]::TEXT[];
 	BEGIN
+		-- =====================================================================
+		-- HANDLE UPDATE: deteksi kolom yang berubah
+		-- =====================================================================
 		IF TG_OP = 'UPDATE' THEN
+			IF OLD.entity_id IS DISTINCT FROM NEW.entity_id THEN
+				changed_columns := jsonb_set(changed_columns, '{entity_id_social_media}', to_jsonb(NEW.entity_id));
+				column_change_name := array_append(column_change_name, 'entity_id_social_media');
+			END IF;
+
+			IF OLD.whatsapp IS DISTINCT FROM NEW.whatsapp THEN
+				changed_columns := jsonb_set(changed_columns, '{whatsapp_social_media}', to_jsonb(NEW.whatsapp));
+				column_change_name := array_append(column_change_name, 'whatsapp_social_media');
+			END IF;
+
+			IF OLD.facebook IS DISTINCT FROM NEW.facebook THEN
+				changed_columns := jsonb_set(changed_columns, '{facebook_social_media}', to_jsonb(NEW.facebook));
+				column_change_name := array_append(column_change_name, 'facebook_social_media');
+			END IF;
+
+			IF OLD.tiktok IS DISTINCT FROM NEW.tiktok THEN
+				changed_columns := jsonb_set(changed_columns, '{tiktok_social_media}', to_jsonb(NEW.tiktok));
+				column_change_name := array_append(column_change_name, 'tiktok_social_media');
+			END IF;
+
+			IF OLD.instagram IS DISTINCT FROM NEW.instagram THEN
+				changed_columns := jsonb_set(changed_columns, '{instagram_social_media}', to_jsonb(NEW.instagram));
+				column_change_name := array_append(column_change_name, 'instagram_social_media');
+			END IF;
+
+			IF OLD.entity_type IS DISTINCT FROM NEW.entity_type THEN
+				changed_columns := jsonb_set(changed_columns, '{entity_type_social_media}', to_jsonb(NEW.entity_type));
+				column_change_name := array_append(column_change_name, 'entity_type_social_media');
+			END IF;
+
+			IF OLD.updated_at IS DISTINCT FROM NEW.updated_at THEN
+				changed_columns := jsonb_set(changed_columns, '{updated_at}', to_jsonb(NEW.updated_at));
+				column_change_name := array_append(column_change_name, 'updated_at');
+			END IF;
+
+			-- Bangun payload JSON untuk UPDATE
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+				'changed_columns', changed_columns,
+				'column_change_name', column_change_name,
 				'id_social_media', NEW.id,
 				'entity_id_social_media', NEW.entity_id,
 				'whatsapp_social_media', NEW.whatsapp,
@@ -380,6 +753,9 @@ func EntitySocialMediaTrigger() string {
 			);
 			PERFORM pg_notify('entity_social_media_channel', payload::text);
 
+		-- =====================================================================
+		-- HANDLE INSERT
+		-- =====================================================================
 		ELSIF TG_OP = 'INSERT' THEN
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
@@ -393,10 +769,15 @@ func EntitySocialMediaTrigger() string {
 				'entity_type_social_media', NEW.entity_type,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('entity_social_media_channel', payload::text);
 
+		-- =====================================================================
+		-- HANDLE DELETE
+		-- =====================================================================
 		ELSIF TG_OP = 'DELETE' THEN
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
@@ -410,7 +791,9 @@ func EntitySocialMediaTrigger() string {
 				'entity_type_social_media', OLD.entity_type,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('entity_social_media_channel', payload::text);
 		END IF;
@@ -419,6 +802,7 @@ func EntitySocialMediaTrigger() string {
 	END;
 	$$ LANGUAGE plpgsql;
 
+	DROP TRIGGER IF EXISTS entity_social_media_trigger ON entity_social_media;
 	CREATE TRIGGER entity_social_media_trigger
 	AFTER INSERT OR UPDATE OR DELETE ON entity_social_media
 	FOR EACH ROW
@@ -443,11 +827,39 @@ func AktivitasPenggunaTrigger() string {
 	RETURNS trigger AS $$
 	DECLARE
 		payload JSON;
+		changed_columns JSONB := '{}'::jsonb;
+		column_change_name TEXT[] := ARRAY[]::TEXT[];
 	BEGIN
+		-- =====================================================================
+		-- HANDLE UPDATE: deteksi perubahan kolom
+		-- =====================================================================
 		IF TG_OP = 'UPDATE' THEN
+			IF OLD.id_pengguna IS DISTINCT FROM NEW.id_pengguna THEN
+				changed_columns := jsonb_set(changed_columns, '{id_pengguna_aktivitas_pengguna}', to_jsonb(NEW.id_pengguna));
+				column_change_name := array_append(column_change_name, 'id_pengguna_aktivitas_pengguna');
+			END IF;
+
+			IF OLD.waktu_dilakukan IS DISTINCT FROM NEW.waktu_dilakukan THEN
+				changed_columns := jsonb_set(changed_columns, '{waktu_dilakukan_aktivitas_pengguna}', to_jsonb(NEW.waktu_dilakukan));
+				column_change_name := array_append(column_change_name, 'waktu_dilakukan_aktivitas_pengguna');
+			END IF;
+
+			IF OLD.aksi IS DISTINCT FROM NEW.aksi THEN
+				changed_columns := jsonb_set(changed_columns, '{aksi_aktivitas_pengguna}', to_jsonb(NEW.aksi));
+				column_change_name := array_append(column_change_name, 'aksi_aktivitas_pengguna');
+			END IF;
+
+			IF OLD.updated_at IS DISTINCT FROM NEW.updated_at THEN
+				changed_columns := jsonb_set(changed_columns, '{updated_at}', to_jsonb(NEW.updated_at));
+				column_change_name := array_append(column_change_name, 'updated_at');
+			END IF;
+
+			-- Payload JSON untuk UPDATE
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+				'changed_columns', changed_columns,
+				'column_change_name', column_change_name,
 				'id_aktivitas_pengguna', NEW.id,
 				'id_pengguna_aktivitas_pengguna', NEW.id_pengguna,
 				'waktu_dilakukan_aktivitas_pengguna', NEW.waktu_dilakukan,
@@ -458,6 +870,9 @@ func AktivitasPenggunaTrigger() string {
 			);
 			PERFORM pg_notify('aktivitas_pengguna_channel', payload::text);
 
+		-- =====================================================================
+		-- HANDLE INSERT
+		-- =====================================================================
 		ELSIF TG_OP = 'INSERT' THEN
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
@@ -468,10 +883,15 @@ func AktivitasPenggunaTrigger() string {
 				'aksi_aktivitas_pengguna', NEW.aksi,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('aktivitas_pengguna_channel', payload::text);
 
+		-- =====================================================================
+		-- HANDLE DELETE
+		-- =====================================================================
 		ELSIF TG_OP = 'DELETE' THEN
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
@@ -482,7 +902,9 @@ func AktivitasPenggunaTrigger() string {
 				'aksi_aktivitas_pengguna', OLD.aksi,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('aktivitas_pengguna_channel', payload::text);
 		END IF;
@@ -491,6 +913,7 @@ func AktivitasPenggunaTrigger() string {
 	END;
 	$$ LANGUAGE plpgsql;
 
+	DROP TRIGGER IF EXISTS aktivitas_pengguna_trigger ON aktivitas_pengguna;
 	CREATE TRIGGER aktivitas_pengguna_trigger
 	AFTER INSERT OR UPDATE OR DELETE ON aktivitas_pengguna
 	FOR EACH ROW
@@ -515,8 +938,38 @@ func AktivitasSellerTrigger() string {
 	RETURNS trigger AS $$
 	DECLARE
 		payload JSON;
+		changed_columns JSONB := '{}'::jsonb;
+		column_change_name TEXT[] := ARRAY[]::TEXT[];
 	BEGIN
+		-- =====================================================================
+		-- HANDLE UPDATE
+		-- =====================================================================
 		IF TG_OP = 'UPDATE' THEN
+			IF OLD.id_seller IS DISTINCT FROM NEW.id_seller THEN
+				changed_columns := jsonb_set(changed_columns, '{id_seller}', to_jsonb(NEW.id_seller));
+				column_change_name := array_append(column_change_name, 'id_seller');
+			END IF;
+
+			IF OLD.waktu_dilakukan IS DISTINCT FROM NEW.waktu_dilakukan THEN
+				changed_columns := jsonb_set(changed_columns, '{waktu_dilakukan}', to_jsonb(NEW.waktu_dilakukan));
+				column_change_name := array_append(column_change_name, 'waktu_dilakukan');
+			END IF;
+
+			IF OLD.aksi IS DISTINCT FROM NEW.aksi THEN
+				changed_columns := jsonb_set(changed_columns, '{aksi}', to_jsonb(NEW.aksi));
+				column_change_name := array_append(column_change_name, 'aksi');
+			END IF;
+
+			IF OLD.updated_at IS DISTINCT FROM NEW.updated_at THEN
+				changed_columns := jsonb_set(changed_columns, '{updated_at}', to_jsonb(NEW.updated_at));
+				column_change_name := array_append(column_change_name, 'updated_at');
+			END IF;
+
+			IF OLD.deleted_at IS DISTINCT FROM NEW.deleted_at THEN
+				changed_columns := jsonb_set(changed_columns, '{deleted_at}', to_jsonb(NEW.deleted_at));
+				column_change_name := array_append(column_change_name, 'deleted_at');
+			END IF;
+
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
@@ -526,10 +979,17 @@ func AktivitasSellerTrigger() string {
 				'aksi_aktivitas_seller', NEW.aksi,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', changed_columns,
+				'column_change_name', column_change_name
 			);
-			PERFORM pg_notify('aktivitas_seller_channel', payload::text);
 
+			PERFORM pg_notify('aktivitas_seller_channel', payload::text);
+			RETURN NEW;
+
+		-- =====================================================================
+		-- HANDLE INSERT
+		-- =====================================================================
 		ELSIF TG_OP = 'INSERT' THEN
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
@@ -540,10 +1000,17 @@ func AktivitasSellerTrigger() string {
 				'aksi_aktivitas_seller', NEW.aksi,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
-			PERFORM pg_notify('aktivitas_seller_channel', payload::text);
 
+			PERFORM pg_notify('aktivitas_seller_channel', payload::text);
+			RETURN NEW;
+
+		-- =====================================================================
+		-- HANDLE DELETE
+		-- =====================================================================
 		ELSIF TG_OP = 'DELETE' THEN
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
@@ -554,12 +1021,14 @@ func AktivitasSellerTrigger() string {
 				'aksi_aktivitas_seller', OLD.aksi,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
-			PERFORM pg_notify('aktivitas_seller_channel', payload::text);
-		END IF;
 
-		RETURN NEW;
+			PERFORM pg_notify('aktivitas_seller_channel', payload::text);
+			RETURN OLD;
+		END IF;
 	END;
 	$$ LANGUAGE plpgsql;
 
@@ -587,8 +1056,68 @@ func AlamatPenggunaTrigger() string {
 	RETURNS trigger AS $$
 	DECLARE
 		payload JSON;
+		changed_columns JSONB := '{}'::jsonb;
+		column_change_name TEXT[] := ARRAY[]::TEXT[];
 	BEGIN
+		-- =========================================================
+		-- HANDLE UPDATE
+		-- =========================================================
 		IF TG_OP = 'UPDATE' THEN
+			IF OLD.id_pengguna IS DISTINCT FROM NEW.id_pengguna THEN
+				changed_columns := jsonb_set(changed_columns, '{id_pengguna}', to_jsonb(NEW.id_pengguna));
+				column_change_name := array_append(column_change_name, 'id_pengguna');
+			END IF;
+
+			IF OLD.panggilan_alamat IS DISTINCT FROM NEW.panggilan_alamat THEN
+				changed_columns := jsonb_set(changed_columns, '{panggilan_alamat}', to_jsonb(NEW.panggilan_alamat));
+				column_change_name := array_append(column_change_name, 'panggilan_alamat');
+			END IF;
+
+			IF OLD.nomor_telefon IS DISTINCT FROM NEW.nomor_telefon THEN
+				changed_columns := jsonb_set(changed_columns, '{nomor_telefon}', to_jsonb(NEW.nomor_telefon));
+				column_change_name := array_append(column_change_name, 'nomor_telefon');
+			END IF;
+
+			IF OLD.nama_alamat IS DISTINCT FROM NEW.nama_alamat THEN
+				changed_columns := jsonb_set(changed_columns, '{nama_alamat}', to_jsonb(NEW.nama_alamat));
+				column_change_name := array_append(column_change_name, 'nama_alamat');
+			END IF;
+
+			IF OLD.kota IS DISTINCT FROM NEW.kota THEN
+				changed_columns := jsonb_set(changed_columns, '{kota}', to_jsonb(NEW.kota));
+				column_change_name := array_append(column_change_name, 'kota');
+			END IF;
+
+			IF OLD.kode_pos IS DISTINCT FROM NEW.kode_pos THEN
+				changed_columns := jsonb_set(changed_columns, '{kode_pos}', to_jsonb(NEW.kode_pos));
+				column_change_name := array_append(column_change_name, 'kode_pos');
+			END IF;
+
+			IF OLD.kode_negara IS DISTINCT FROM NEW.kode_negara THEN
+				changed_columns := jsonb_set(changed_columns, '{kode_negara}', to_jsonb(NEW.kode_negara));
+				column_change_name := array_append(column_change_name, 'kode_negara');
+			END IF;
+
+			IF OLD.deskripsi IS DISTINCT FROM NEW.deskripsi THEN
+				changed_columns := jsonb_set(changed_columns, '{deskripsi}', to_jsonb(NEW.deskripsi));
+				column_change_name := array_append(column_change_name, 'deskripsi');
+			END IF;
+
+			IF OLD.longitude IS DISTINCT FROM NEW.longitude THEN
+				changed_columns := jsonb_set(changed_columns, '{longitude}', to_jsonb(NEW.longitude));
+				column_change_name := array_append(column_change_name, 'longitude');
+			END IF;
+
+			IF OLD.latitude IS DISTINCT FROM NEW.latitude THEN
+				changed_columns := jsonb_set(changed_columns, '{latitude}', to_jsonb(NEW.latitude));
+				column_change_name := array_append(column_change_name, 'latitude');
+			END IF;
+
+			IF OLD.updated_at IS DISTINCT FROM NEW.updated_at THEN
+				changed_columns := jsonb_set(changed_columns, '{updated_at}', to_jsonb(NEW.updated_at));
+				column_change_name := array_append(column_change_name, 'updated_at');
+			END IF;
+
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
@@ -605,11 +1134,17 @@ func AlamatPenggunaTrigger() string {
 				'latitude_alamat_user', NEW.latitude,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', changed_columns,
+				'column_change_name', column_change_name
 			);
+
 			PERFORM pg_notify('alamat_pengguna_channel', payload::text);
 			RETURN NEW;
 
+		-- =========================================================
+		-- HANDLE INSERT
+		-- =========================================================
 		ELSIF TG_OP = 'INSERT' THEN
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
@@ -627,11 +1162,16 @@ func AlamatPenggunaTrigger() string {
 				'latitude_alamat_user', NEW.latitude,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('alamat_pengguna_channel', payload::text);
 			RETURN NEW;
 
+		-- =========================================================
+		-- HANDLE DELETE
+		-- =========================================================
 		ELSIF TG_OP = 'DELETE' THEN
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
@@ -649,7 +1189,9 @@ func AlamatPenggunaTrigger() string {
 				'latitude_alamat_user', OLD.latitude,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('alamat_pengguna_channel', payload::text);
 			RETURN OLD;
@@ -688,6 +1230,7 @@ func JenisSellerValidationTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_jenis_seller', NEW.id,
 				'id_seller_jenis_seller', NEW.id_seller,
 				'validation_status_jenis_seller', NEW.validation_status,
@@ -696,7 +1239,10 @@ func JenisSellerValidationTrigger() string {
 				'target_jenis_seller', NEW.target_jenis,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('jenis_seller_validation_channel', payload::text);
 			RETURN NEW;
@@ -705,6 +1251,7 @@ func JenisSellerValidationTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_jenis_seller', NEW.id,
 				'id_seller_jenis_seller', NEW.id_seller,
 				'validation_status_jenis_seller', NEW.validation_status,
@@ -713,7 +1260,10 @@ func JenisSellerValidationTrigger() string {
 				'target_jenis_seller', NEW.target_jenis,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('jenis_seller_validation_channel', payload::text);
 			RETURN NEW;
@@ -722,6 +1272,7 @@ func JenisSellerValidationTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_jenis_seller', OLD.id,
 				'id_seller_jenis_seller', OLD.id_seller,
 				'validation_status_jenis_seller', OLD.validation_status,
@@ -730,7 +1281,10 @@ func JenisSellerValidationTrigger() string {
 				'target_jenis_seller', OLD.target_jenis,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('jenis_seller_validation_channel', payload::text);
 			RETURN OLD;
@@ -769,6 +1323,7 @@ func AlamatSellerTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_alamat_seller', NEW.id,
 				'id_seller_alamat_seller', NEW.id_seller,
 				'panggilan_alamat_seller', NEW.panggilan_alamat,
@@ -779,7 +1334,10 @@ func AlamatSellerTrigger() string {
 				'latitude_alamat_seller', NEW.latitude,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('alamat_seller_channel', payload::text);
 			RETURN NEW;
@@ -788,6 +1346,7 @@ func AlamatSellerTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_alamat_seller', NEW.id,
 				'id_seller_alamat_seller', NEW.id_seller,
 				'panggilan_alamat_seller', NEW.panggilan_alamat,
@@ -798,16 +1357,19 @@ func AlamatSellerTrigger() string {
 				'latitude_alamat_seller', NEW.latitude,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('alamat_seller_channel', payload::text);
 			RETURN NEW;
 
 		ELSIF TG_OP = 'DELETE' THEN
-			-- gunakan OLD pada DELETE (NEW tidak tersedia)
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_alamat_seller', OLD.id,
 				'id_seller_alamat_seller', OLD.id_seller,
 				'panggilan_alamat_seller', OLD.panggilan_alamat,
@@ -818,7 +1380,10 @@ func AlamatSellerTrigger() string {
 				'latitude_alamat_seller', OLD.latitude,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('alamat_seller_channel', payload::text);
 			RETURN OLD;
@@ -857,13 +1422,17 @@ func BatalTransaksiTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_batal_transaksi', NEW.id,
 				'id_transaksi_batal_transaksi', NEW.id_transaksi,
 				'transaksi_dibatalkan_oleh', NEW.dibatalkan_oleh,
 				'alasan_batal_transaksi', NEW.alasan,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('batal_transaksi_channel', payload::text);
 			RETURN NEW;
@@ -872,13 +1441,17 @@ func BatalTransaksiTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_batal_transaksi', NEW.id,
 				'id_transaksi_batal_transaksi', NEW.id_transaksi,
 				'transaksi_dibatalkan_oleh', NEW.dibatalkan_oleh,
 				'alasan_batal_transaksi', NEW.alasan,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('batal_transaksi_channel', payload::text);
 			RETURN NEW;
@@ -887,13 +1460,17 @@ func BatalTransaksiTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_batal_transaksi', OLD.id,
 				'id_transaksi_batal_transaksi', OLD.id_transaksi,
 				'transaksi_dibatalkan_oleh', OLD.dibatalkan_oleh,
 				'alasan_batal_transaksi', OLD.alasan,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('batal_transaksi_channel', payload::text);
 			RETURN OLD;
@@ -932,12 +1509,16 @@ func DiskonTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_barang_induk_diskon', NEW.id_barang_induk,
 				'deskripsi_diskon', NEW.berlaku,
 				'expired_diskon', NEW.expired,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('diskon_channel', payload::text);
 			RETURN NEW;
@@ -946,12 +1527,16 @@ func DiskonTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_barang_induk_diskon', NEW.id_barang_induk,
 				'deskripsi_diskon', NEW.berlaku,
 				'expired_diskon', NEW.expired,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('diskon_channel', payload::text);
 			RETURN NEW;
@@ -960,12 +1545,16 @@ func DiskonTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_barang_induk_diskon', OLD.id_barang_induk,
 				'deskripsi_diskon', OLD.berlaku,
 				'expired_diskon', OLD.expired,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('diskon_channel', payload::text);
 			RETURN OLD;
@@ -1004,6 +1593,7 @@ func RekeningSellerTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_rekening_seller', NEW.id,
 				'id_seller', NEW.id_seller,
 				'nama_bank_rekening_seller', NEW.nama_bank,
@@ -1013,7 +1603,10 @@ func RekeningSellerTrigger() string {
 				'status_rekening_seller', NEW.status,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('rekening_seller_channel', payload::text);
 			RETURN NEW;
@@ -1022,6 +1615,7 @@ func RekeningSellerTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_rekening_seller', NEW.id,
 				'id_seller', NEW.id_seller,
 				'nama_bank_rekening_seller', NEW.nama_bank,
@@ -1031,7 +1625,10 @@ func RekeningSellerTrigger() string {
 				'status_rekening_seller', NEW.status,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('rekening_seller_channel', payload::text);
 			RETURN NEW;
@@ -1040,6 +1637,7 @@ func RekeningSellerTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_rekening_seller', OLD.id,
 				'id_seller', OLD.id_seller,
 				'nama_bank_rekening_seller', OLD.nama_bank,
@@ -1049,7 +1647,10 @@ func RekeningSellerTrigger() string {
 				'status_rekening_seller', OLD.status,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('rekening_seller_channel', payload::text);
 			RETURN OLD;
@@ -1088,6 +1689,7 @@ func BalanceKurirLogTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_balance_kurir', NEW.id,
 				'kurir_id', NEW.kurir_id,
 				'amount_balance_kurir', NEW.amount,
@@ -1095,7 +1697,10 @@ func BalanceKurirLogTrigger() string {
 				'catatan_balance_kurir', NEW.catatan,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('balance_kurir_log_channel', payload::text);
 			RETURN NEW;
@@ -1104,6 +1709,7 @@ func BalanceKurirLogTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_balance_kurir', NEW.id,
 				'kurir_id', NEW.kurir_id,
 				'amount_balance_kurir', NEW.amount,
@@ -1111,7 +1717,10 @@ func BalanceKurirLogTrigger() string {
 				'catatan_balance_kurir', NEW.catatan,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('balance_kurir_log_channel', payload::text);
 			RETURN NEW;
@@ -1120,6 +1729,7 @@ func BalanceKurirLogTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_balance_kurir', OLD.id,
 				'kurir_id', OLD.kurir_id,
 				'amount_balance_kurir', OLD.amount,
@@ -1127,7 +1737,10 @@ func BalanceKurirLogTrigger() string {
 				'catatan_balance_kurir', OLD.catatan,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('balance_kurir_log_channel', payload::text);
 			RETURN OLD;
@@ -1166,6 +1779,7 @@ func AlamatGudangTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_alamat_gudang', NEW.id,
 				'id_seller_alamat_gudang', NEW.id_seller,
 				'panggilan_alamat_gudang', NEW.panggilan_alamat,
@@ -1180,7 +1794,10 @@ func AlamatGudangTrigger() string {
 				'latitude_alamat_gudang', NEW.latitude,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('alamat_gudang_channel', payload::text);
 			RETURN NEW;
@@ -1189,6 +1806,7 @@ func AlamatGudangTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_alamat_gudang', NEW.id,
 				'id_seller_alamat_gudang', NEW.id_seller,
 				'panggilan_alamat_gudang', NEW.panggilan_alamat,
@@ -1203,7 +1821,10 @@ func AlamatGudangTrigger() string {
 				'latitude_alamat_gudang', NEW.latitude,
 				'created_at', NEW.created_at,
 				'updated_at', NEW.updated_at,
-				'deleted_at', NEW.deleted_at
+				'deleted_at', NEW.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('alamat_gudang_channel', payload::text);
 			RETURN NEW;
@@ -1212,6 +1833,7 @@ func AlamatGudangTrigger() string {
 			payload := json_build_object(
 				'table', TG_TABLE_NAME,
 				'action', TG_OP,
+
 				'id_alamat_gudang', OLD.id,
 				'id_seller_alamat_gudang', OLD.id_seller,
 				'panggilan_alamat_gudang', OLD.panggilan_alamat,
@@ -1226,7 +1848,10 @@ func AlamatGudangTrigger() string {
 				'latitude_alamat_gudang', OLD.latitude,
 				'created_at', OLD.created_at,
 				'updated_at', OLD.updated_at,
-				'deleted_at', OLD.deleted_at
+				'deleted_at', OLD.deleted_at,
+
+				'changed_columns', '{}'::jsonb,
+				'column_change_name', ARRAY[]::TEXT[]
 			);
 			PERFORM pg_notify('alamat_gudang_channel', payload::text);
 			RETURN OLD;

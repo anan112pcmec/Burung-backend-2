@@ -94,7 +94,7 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 	}()
 	go func() {
 		defer wg.Done()
-		dispatcher.Informasi_Pengiriman_Watcher(ctx, dsn, connection.DB)
+		dispatcher.Pengiriman_Watcher(ctx, dsn, connection.DB)
 	}()
 	go func() {
 		defer wg.Done()
