@@ -14,6 +14,7 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/notify_payload"
 	seller_barang_watcher "github.com/anan112pcmec/Burung-backend-2/watcher_app/services/seller/barang_services"
+
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -107,7 +108,12 @@ func Kategori_Barang_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) 
 			}
 
 			if data.Action == "UPDATE" {
-				go seller_barang_watcher.BarangReady(ctx, dbQuery, data)
+				for _, kolom := range data.ColumnChangedNames {
+					if kolom == "id_rekening" || kolom == "id_alamat_gudang" {
+						go seller_barang_watcher.BarangReady(ctx, dbQuery, data)
+						break
+					}
+				}
 			}
 
 		case <-ticker.C:
