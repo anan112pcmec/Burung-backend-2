@@ -10,11 +10,10 @@ import "github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 // Notify Payload Pengguna
 // ////////////////////////////////////////////////////////////////////////////
 
-type NotifyResponsesPayloadPengguna struct {
+type NotifyResponsePayloadPengguna struct {
 	TableAndAction
 	models.Pengguna
-	ChangedColumns    ChangedColumns `json:"changed_columns_pengguna"`
-	ColumnChangeNames []string       `json:"column_change_name"`
+	ColumnChangeInfo
 }
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -24,8 +23,7 @@ type NotifyResponsesPayloadPengguna struct {
 type NotifyResponsePayloadSeller struct {
 	TableAndAction
 	models.Seller
-	ChangedColumns    ChangedColumns `json:"changed_columns_seller"`
-	ColumnChangeNames []string       `json:"column_change_name"`
+	ColumnChangeInfo
 }
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -35,6 +33,5 @@ type NotifyResponsePayloadSeller struct {
 type NotifyResponsePayloadKurir struct {
 	TableAndAction
 	models.Kurir
-	ChangedColumns    ChangedColumns `json:"changed_columns_kurir"`
-	ColumnChangeNames []string       `json:"column_change_name"`
+	ColumnChangeInfo
 }

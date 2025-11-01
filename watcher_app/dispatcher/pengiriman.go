@@ -44,7 +44,7 @@ func Pengiriman_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) {
 
 			fmt.Printf("🔔 Dapat notify Informasi Pengiriman: %s\n", n.Extra)
 
-			var data notify_payload.NotifyResponsePengiriman
+			var data notify_payload.NotifyResponsePayloadPengiriman
 			if err := json.Unmarshal([]byte(n.Extra), &data); err != nil {
 				fmt.Println("❌ Gagal Parse JSON:", err)
 				continue
@@ -110,7 +110,7 @@ func JejakPengiriman_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) 
 
 			fmt.Printf("🔔 Dapat notify Informasi Pengiriman: %s\n", n.Extra)
 
-			var data notify_payload.NotifyResponsePengiriman
+			var data notify_payload.NotifyResponsePayloadPengiriman
 			if err := json.Unmarshal([]byte(n.Extra), &data); err != nil {
 				fmt.Println("❌ Gagal Parse JSON:", err)
 				continue

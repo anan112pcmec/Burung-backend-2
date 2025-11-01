@@ -44,7 +44,7 @@ func Transaksi_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB, conn *
 
 			fmt.Printf("🔔 Dapat notify Transaksi: %s\n", n.Extra)
 
-			var data notify_payload.NotifyResponseTransaksi
+			var data notify_payload.NotifyResponsePayloadTransaksi
 			if err := json.Unmarshal([]byte(n.Extra), &data); err != nil {
 				fmt.Println("❌ Gagal Parse JSON:", err)
 				continue
@@ -102,7 +102,7 @@ func Pembayaran_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB, conn 
 
 			fmt.Printf("🔔 Dapat notify Transaksi: %s\n", n.Extra)
 
-			var data notify_payload.NotifyResponseTransaksi
+			var data notify_payload.NotifyResponsePayloadTransaksi
 			if err := json.Unmarshal([]byte(n.Extra), &data); err != nil {
 				fmt.Println("❌ Gagal Parse JSON:", err)
 				continue

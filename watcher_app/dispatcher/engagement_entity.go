@@ -45,7 +45,7 @@ func Informasi_Kurir_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) 
 
 			fmt.Printf("🔔 Dapat notify Informasi Kurir: %s\n", n.Extra)
 
-			var data notify_payload.NotifyResponseInformasiKurir
+			var data notify_payload.NotifyPayloadResponseInformasiKendaraanKurir
 			if err := json.Unmarshal([]byte(n.Extra), &data); err != nil {
 				fmt.Println("❌ Gagal Parse JSON:", err)
 				continue
@@ -53,7 +53,7 @@ func Informasi_Kurir_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB) 
 
 			switch data.Action {
 			case "UPDATE":
-				go kurir_informasi_watcher.VerifiedKurir(ctx, data.IdKurir, data.StatusPerizinan, data.JenisKendaraan, dbQuery)
+				go kurir_informasi_watcher.VerifiedKurir(ctx, data.IDkurir, data.StatusPerizinan, data.JenisKendaraan, dbQuery)
 			default:
 				fmt.Println("⚠️ Aksi komentar tidak dikenali:", data.Action)
 			}
@@ -99,7 +99,7 @@ func Follower_Watcher(ctx context.Context, dsn string, dbQuery *gorm.DB, entity_
 
 			fmt.Printf("🔔 Dapat notify informasi pengiriman: %s\n", n.Extra)
 
-			var data notify_payload.NotifyResponseFollower
+			var data notify_payload.NotifyResponsePayloadFollower
 			if err := json.Unmarshal([]byte(n.Extra), &data); err != nil {
 				fmt.Println("❌ Gagal parse JSON:", err)
 				continue

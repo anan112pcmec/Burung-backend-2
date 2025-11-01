@@ -11,7 +11,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/notify_payload"
 )
 
-func SellerFollowed(ctx context.Context, data notify_payload.NotifyResponseFollower, db *gorm.DB, rds *redis.Client) {
+func SellerFollowed(ctx context.Context, data notify_payload.NotifyResponsePayloadFollower, db *gorm.DB, rds *redis.Client) {
 
 	key := fmt.Sprintf("seller_data:%v", data.IdFollowed)
 
@@ -30,7 +30,7 @@ func SellerFollowed(ctx context.Context, data notify_payload.NotifyResponseFollo
 	}
 }
 
-func SellerUnfollowed(ctx context.Context, data notify_payload.NotifyResponseFollower, db *gorm.DB, rds *redis.Client) {
+func SellerUnfollowed(ctx context.Context, data notify_payload.NotifyResponsePayloadFollower, db *gorm.DB, rds *redis.Client) {
 	// Kunci Redis untuk seller terkait
 	key := fmt.Sprintf("seller_data:%v", data.IdFollowed)
 

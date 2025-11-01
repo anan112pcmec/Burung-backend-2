@@ -13,7 +13,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/notify_payload"
 )
 
-func UpUser(ctx context.Context, data notify_payload.NotifyResponsesPayloadPengguna, conn *amqp091.Connection) {
+func UpUser(ctx context.Context, data notify_payload.NotifyResponsePayloadPengguna, conn *amqp091.Connection) {
 	var notif notification.Notification
 	NamaQueue, RoutingKey := producer_mb.UserQueueRoutingKeyGenerate(data.Username, data.ID)
 
@@ -30,7 +30,7 @@ func UpUser(ctx context.Context, data notify_payload.NotifyResponsesPayloadPengg
 	}
 }
 
-func OnlinePengguna(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsesPayloadPengguna, rds *redis.Client, conn *amqp091.Connection) {
+func OnlinePengguna(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsePayloadPengguna, rds *redis.Client, conn *amqp091.Connection) {
 	var notif notification.Notification
 	fmt.Printf("[INFO] Menyimpan status online user '%s' (ID: %v) ke Redis\n", data.Username, data.ID)
 
@@ -57,7 +57,7 @@ func OnlinePengguna(ctx context.Context, db *gorm.DB, data notify_payload.Notify
 	}
 }
 
-func OfflinePengguna(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsesPayloadPengguna, rds *redis.Client) {
+func OfflinePengguna(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsePayloadPengguna, rds *redis.Client) {
 	key := fmt.Sprintf("pengguna_online:%v", data.ID)
 
 	if err := rds.Del(ctx, key).Err(); err != nil {

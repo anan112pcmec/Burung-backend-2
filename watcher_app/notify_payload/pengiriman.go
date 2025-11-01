@@ -2,14 +2,14 @@ package notify_payload
 
 import "github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
 
-type NotifyPayloadResponseBarangInduk struct {
+type NotifyResponsePayloadPengiriman struct {
 	TableAndAction
-	models.BarangInduk
+	models.Pengiriman
 	ColumnChangeInfo
 }
 
-type NotifyPayloadResponseKategoriBarang struct {
+type NotifyResponsePayloadJejakPengiriman struct {
 	TableAndAction
-	models.KategoriBarang
+	models.JejakPengiriman
 	ColumnChangeInfo
 }

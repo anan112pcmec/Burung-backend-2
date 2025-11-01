@@ -10,7 +10,6 @@ import (
 	maintain_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/maintain"
 	producer_mb "github.com/anan112pcmec/Burung-backend-2/watcher_app/message_broker/producer"
 	trigger "github.com/anan112pcmec/Burung-backend-2/watcher_app/triggers"
-
 )
 
 func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, dsn string, Exchange string) {
@@ -49,7 +48,7 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 		fmt.Println(err)
 	}
 
-	wg.Add(13)
+	wg.Add(12)
 	go func() {
 		defer wg.Done()
 		fmt.Println("Maintain Barang Jalan")
@@ -80,10 +79,7 @@ func Watcher(connection *Connection, ctx context.Context, wg *sync.WaitGroup, ds
 	go func() {
 		dispatcher.Kategori_Barang_Watcher(ctx, dsn, connection.DB)
 	}()
-	go func() {
-		defer wg.Done()
-		dispatcher.Varian_Barang_Watcher(ctx, dsn, connection.DB)
-	}()
+
 	go func() {
 		defer wg.Done()
 		dispatcher.Transaksi_Watcher(ctx, dsn, connection.DB, connection.NOTIFICATION)

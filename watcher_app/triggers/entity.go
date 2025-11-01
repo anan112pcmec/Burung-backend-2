@@ -166,10 +166,7 @@ func SellerTrigger() string {
 				column_change_name := array_append(column_change_name, 'jenis');
 			END IF;
 
-			IF OLD.norek IS DISTINCT FROM NEW.norek THEN
-				changed_columns := jsonb_set(changed_columns, '{norek}', to_jsonb(NEW.norek));
-				column_change_name := array_append(column_change_name, 'norek');
-			END IF;
+			
 
 			IF OLD.seller_dedication IS DISTINCT FROM NEW.seller_dedication THEN
 				changed_columns := jsonb_set(changed_columns, '{seller_dedication}', to_jsonb(NEW.seller_dedication));
@@ -194,7 +191,6 @@ func SellerTrigger() string {
 				'nama_seller', OLD.nama,
 				'email_seller', OLD.email,
 				'jenis_seller', OLD.jenis,
-				'norek_seller', OLD.norek,
 				'jam_operasional_seller', OLD.jam_operasional,
 				'punchline_seller', OLD.punchline,
 				'deskripsi_seller', OLD.deskripsi,
@@ -219,7 +215,6 @@ func SellerTrigger() string {
 				'nama_seller', NEW.nama,
 				'email_seller', NEW.email,
 				'jenis_seller', NEW.jenis,
-				'norek_seller', NEW.norek,
 				'jam_operasional_seller', NEW.jam_operasional,
 				'punchline_seller', NEW.punchline,
 				'deskripsi_seller', NEW.deskripsi,
@@ -244,7 +239,6 @@ func SellerTrigger() string {
 				'nama_seller', OLD.nama,
 				'email_seller', OLD.email,
 				'jenis_seller', OLD.jenis,
-				'norek_seller', OLD.norek,
 				'jam_operasional_seller', OLD.jam_operasional,
 				'punchline_seller', OLD.punchline,
 				'deskripsi_seller', OLD.deskripsi,

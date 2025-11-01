@@ -13,7 +13,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-2/watcher_app/notify_payload"
 )
 
-func ApprovedTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *gorm.DB, conn *amqp091.Connection) {
+func ApprovedTransaksiChange(data notify_payload.NotifyResponsePayloadTransaksi, db *gorm.DB, conn *amqp091.Connection) {
 	var notif notification.Notification
 	start := time.Now()
 	fmt.Printf("\n[INFO] [START] ApprovedTransaksiChange | TransaksiID=%d | Status=%s | User=%d | Kuantitas=%d | Time=%s\n",
@@ -151,7 +151,7 @@ func ApprovedTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *go
 		data.ID, end.Sub(start).Milliseconds())
 }
 
-func UnapproveTransaksiChange(data notify_payload.NotifyResponseTransaksi, db *gorm.DB, conn *amqp091.Connection) {
+func UnapproveTransaksiChange(data notify_payload.NotifyResponsePayloadTransaksi, db *gorm.DB, conn *amqp091.Connection) {
 	var id_varian_barangs []int64
 
 	fmt.Printf("[INFO] [START] UnapproveTransaksiChange | TransaksiID=%d | User=%d | Kuantitas=%d\n", data.ID, data.IdPengguna, data.Kuantitas)

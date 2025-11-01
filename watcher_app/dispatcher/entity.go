@@ -40,7 +40,7 @@ func Pengguna_Watcher(ctx context.Context, dsn string, db_query *gorm.DB, entity
 		case n := <-listener.Notify:
 			if n != nil {
 				fmt.Printf("🔔 Dapat notify: %s\n", n.Extra)
-				var data notify_payload.NotifyResponsesPayloadPengguna
+				var data notify_payload.NotifyResponsePayloadPengguna
 				err := json.Unmarshal([]byte(n.Extra), &data)
 				if err != nil {
 					fmt.Println("Gagal Parse JSON:", err)

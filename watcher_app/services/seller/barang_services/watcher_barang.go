@@ -16,7 +16,7 @@ import (
 
 // 1. Lebih Bertujuan Untuk Melakukan Caching
 
-func BarangReady(ctx context.Context, db *gorm.DB, data notify_payload.NotifyResponsesPayloadKategoriBarang) {
+func BarangReady(ctx context.Context, db *gorm.DB, data notify_payload.NotifyPayloadResponseKategoriBarang) {
 	if data.IDRekening != 0 && data.IDAlamat != 0 {
 		if err := db.Model(&models.VarianBarang{}).Where(&models.VarianBarang{
 			IdKategori: data.ID,
