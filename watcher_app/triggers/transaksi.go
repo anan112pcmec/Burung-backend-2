@@ -271,6 +271,7 @@ func PembayaranTrigger() string {
 
 func SetupTransaksiTriggers(db *gorm.DB) error {
 	drops := []string{
+		PembayaranDropper(),
 		TransaksiDropper(),
 	}
 
@@ -281,6 +282,7 @@ func SetupTransaksiTriggers(db *gorm.DB) error {
 	}
 
 	triggertransaksi := [...]string{
+		PembayaranTrigger(),
 		TransaksiTrigger(),
 	}
 

@@ -63,8 +63,8 @@ type JenisLayananKurir string
 
 type Kurir struct {
 	ID               int64          `gorm:"primaryKey;autoIncrement" json:"id_kurir"`
-	Nama             string         `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama_kurir"`
 	Username         string         `gorm:"column:username;type:text;not null" json:"username_kurir"`
+	Nama             string         `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama_kurir"`
 	Email            string         `gorm:"column:email;type:varchar(150);not null;default:''" json:"email_kurir"`
 	Jenis            string         `gorm:"column:jenis;type:jenis_layanan_kurir;not null;default:'Reguler'" json:"jenis_kurir"`
 	PasswordHash     string         `gorm:"column:password_hash;type:varchar(250);not null;default:''" json:"pass_kurir"`
