@@ -4,11 +4,9 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
-)
 
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Dropper Dan Trigger untuk transaksi
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	"github.com/anan112pcmec/Burung-backend-2/watcher_app/database/models"
+)
 
 func TransaksiDropper() string {
 	return `
@@ -269,10 +267,138 @@ func PembayaranTrigger() string {
 	`
 }
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Dropper Dan Trigger untuk pembayaran_failed
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func PembayaranFailedDropper() string {
+	return fmt.Sprintf(`DROP TRIGGER IF EXISTS pembayaran_failed_trigger ON %s;
+	DROP FUNCTION IF EXISTS notify_pembayaran_failed_change();`,
+		models.PembayaranFailed{}.TableName())
+}
+
+func PembayaranFailedTrigger() string {
+	return `
+	CREATE OR REPLACE FUNCTION notify_pembayaran_failed_change()
+	RETURNS trigger AS $$
+	DECLARE
+		payload JSON;
+		changed_columns JSONB := '{}'::jsonb;
+		column_change_name TEXT[] := ARRAY[]::TEXT[];
+	BEGIN
+		IF TG_OP = 'UPDATE' THEN
+
+			IF NEW.id_pengguna IS DISTINCT FROM OLD.id_pengguna THEN
+				changed_columns := changed_columns || jsonb_build_object('id_pengguna', jsonb_build_object('old', OLD.id_pengguna, 'new', NEW.id_pengguna));
+				column_change_name := array_append(column_change_name, 'id_pengguna');
+			END IF;
+
+			IF NEW.status IS DISTINCT FROM OLD.status THEN
+				changed_columns := changed_columns || jsonb_build_object('status', jsonb_build_object('old', OLD.status, 'new', NEW.status));
+				column_change_name := array_append(column_change_name, 'status');
+			END IF;
+
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id', OLD.id,
+				'finish_redirect_url', OLD.finish_redirect_url,
+				'fraud_status', OLD.fraud_status,
+				'gross_amount', OLD.gross_amount,
+				'order_id', OLD.order_id,
+				'payment_type', OLD.payment_type,
+				'pdf_url', OLD.pdf_url,
+				'status_code', OLD.status_code,
+				'status_message', OLD.status_message,
+				'transaction_id', OLD.transaction_id,
+				'transaction_status', OLD.transaction_status,
+				'transaction_time', OLD.transaction_time,
+				'bank', OLD.bank,
+				'va_number', OLD.va_number,
+				'payment_code', OLD.payment_code,
+				'status', OLD.status,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', changed_columns,
+				'column_changed_name', column_change_name 
+			);
+			PERFORM pg_notify('pembayaran_failed_channel', payload::text);
+
+		ELSIF TG_OP = 'INSERT' THEN
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id', NEW.id,
+				'finish_redirect_url', NEW.finish_redirect_url,
+				'fraud_status', NEW.fraud_status,
+				'gross_amount', NEW.gross_amount,
+				'order_id', NEW.order_id,
+				'payment_type', NEW.payment_type,
+				'pdf_url', NEW.pdf_url,
+				'status_code', NEW.status_code,
+				'status_message', NEW.status_message,
+				'transaction_id', NEW.transaction_id,
+				'transaction_status', NEW.transaction_status,
+				'transaction_time', NEW.transaction_time,
+				'bank', NEW.bank,
+				'va_number', NEW.va_number,
+				'payment_code', NEW.payment_code,
+				'status', NEW.status,
+				'created_at', NEW.created_at,
+				'updated_at', NEW.updated_at,
+				'deleted_at', NEW.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_changed_name', ARRAY[]::TEXT[]
+			);
+			PERFORM pg_notify('pembayaran_failed_channel', payload::text);
+			
+		ELSIF TG_OP = 'DELETE' THEN 
+			payload := json_build_object(
+				'table', TG_TABLE_NAME,
+				'action', TG_OP,
+				'id', OLD.id,
+				'finish_redirect_url', OLD.finish_redirect_url,
+				'fraud_status', OLD.fraud_status,
+				'gross_amount', OLD.gross_amount,
+				'order_id', OLD.order_id,
+				'payment_type', OLD.payment_type,
+				'pdf_url', OLD.pdf_url,
+				'status_code', OLD.status_code,
+				'status_message', OLD.status_message,
+				'transaction_id', OLD.transaction_id,
+				'transaction_status', OLD.transaction_status,
+				'transaction_time', OLD.transaction_time,
+				'bank', OLD.bank,
+				'va_number', OLD.va_number,
+				'payment_code', OLD.payment_code,
+				'status', OLD.status,
+				'created_at', OLD.created_at,
+				'updated_at', OLD.updated_at,
+				'deleted_at', OLD.deleted_at,
+				'changed_columns', '{}'::jsonb,
+				'column_changed_name', ARRAY[]::TEXT[]
+			);
+			PERFORM pg_notify('pembayaran_failed_channel', payload::text);
+		END IF;
+
+		RETURN NEW;
+	END;
+	$$ LANGUAGE plpgsql;
+
+
+	CREATE TRIGGER pembayaran_failed_trigger
+	AFTER INSERT OR UPDATE OR DELETE ON pembayaran_failed
+	FOR EACH ROW
+	EXECUTE FUNCTION notify_pembayaran_failed_change();
+	`
+}
+
 func SetupTransaksiTriggers(db *gorm.DB) error {
 	drops := []string{
 		PembayaranDropper(),
 		TransaksiDropper(),
+		PembayaranFailedDropper(),
 	}
 
 	for _, drop := range drops {
@@ -284,6 +410,7 @@ func SetupTransaksiTriggers(db *gorm.DB) error {
 	triggertransaksi := [...]string{
 		PembayaranTrigger(),
 		TransaksiTrigger(),
+		PembayaranFailedTrigger(),
 	}
 
 	for _, trig := range triggertransaksi {

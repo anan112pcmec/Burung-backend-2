@@ -13,3 +13,9 @@ type NotifyResponsePayloadPembayaran struct {
 	models.Pembayaran
 	ColumnChangeInfo
 }
+
+type NotifyResponsePayloadPembayaranFailed struct {
+	TableAndAction
+	models.PembayaranFailed
+	ColumnChangeInfo
+}
